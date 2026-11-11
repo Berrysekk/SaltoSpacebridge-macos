@@ -43,27 +43,39 @@ public sealed class Config
     /// <summary>Whether the service fetches and installs new releases on its own.</summary>
     public bool AutoUpdate { get; set; } = true;
 
-    /// <summary>A settings file that cannot be read is set aside and the defaults take over: the bridge must come up either way.</summary>
-    public static Config Load()
+    /// <summary>Settings that let no page in: what the service runs on when the file is there but cannot be read.</summary>
+    public static Config Nobody => new() { Origins = ["(settings unreadable)"] };
+
+    /// <summary>The settings in the file, the defaults when there is none, or null when it cannot be read.</summary>
+    public static Config? Read(string? file = null)
     {
+        file ??= Paths.ConfigFile;
         var config = new Config();
-        if (!File.Exists(Paths.ConfigFile)) return config;
+        if (!File.Exists(file)) return config;
         try
         {
-            var saved = JsonNode.Parse(File.ReadAllText(Paths.ConfigFile))!.AsObject();
+            var saved = JsonNode.Parse(File.ReadAllText(file))!.AsObject();
             if (saved["origins"] is JsonArray origins) config.Origins = [.. origins.Select(o => o!.GetValue<string>())];
             config.Bluetooth = saved["bluetooth"]?.GetValue<bool>() ?? config.Bluetooth;
             config.Serial = saved["serial"]?.GetValue<bool>() ?? config.Serial;
             config.AutoUpdate = saved["autoUpdate"]?.GetValue<bool>() ?? config.AutoUpdate;
+            return config;
         }
-        catch (Exception e) when (e is JsonException or InvalidOperationException or NullReferenceException or FormatException)
+        catch (Exception e) when (e is JsonException or InvalidOperationException or NullReferenceException or FormatException or IOException)
         {
-            var aside = Paths.ConfigFile + ".unreadable";
-            File.Move(Paths.ConfigFile, aside, true);
-            Console.Error.WriteLine($"Settings could not be read ({e.Message}); they are set aside as {Paths.Short(aside)} and the defaults apply.");
-            config = new Config();
+            return null;
         }
-        return config;
+    }
+
+    /// <summary>For the command: settings that cannot be read are set aside, with a word about it, and the defaults take over.
+    /// The service never does this: see Server.Settings.</summary>
+    public static Config Load()
+    {
+        if (Read() is { } config) return config;
+        var aside = Paths.ConfigFile + ".unreadable";
+        File.Move(Paths.ConfigFile, aside, true);
+        Console.Error.WriteLine($"Settings could not be read; they are set aside as {Paths.Short(aside)} and the defaults apply: any website may use the bridge until you `spacebridge allow` your SPACE again.");
+        return new Config();
     }
 
     public void Save()
@@ -76,7 +88,10 @@ public sealed class Config
             ["serial"] = Serial,
             ["autoUpdate"] = AutoUpdate,
         };
-        File.WriteAllText(Paths.ConfigFile, saved.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        // Written beside and renamed over: the running service never sees half a file.
+        var fresh = Paths.ConfigFile + ".new";
+        File.WriteAllText(fresh, saved.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        File.Move(fresh, Paths.ConfigFile, true);
     }
 
     public bool Allows(string? origin) => origin is null || Origins.Count == 0 || Origins.Contains(origin, StringComparer.OrdinalIgnoreCase);

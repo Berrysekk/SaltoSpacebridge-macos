@@ -121,6 +121,18 @@ public static class SelfTest
             Check(release is { Version: "9.1.0", Url: "https://e/a.tar.gz", Sha256: "ab" } && Update.Parse("""{"tag_name":"v1","assets":[]}""") is null
                 && Update.IsNewer("1.10.0", "1.9.9") && !Update.IsNewer("1.2.0", "1.2.0") && !Update.IsNewer("dev", "1.0.0"), "updates: the release's archive and what counts as newer");
 
+            // Settings: half a file or nonsense is no settings at all, never the defaults (which let any website in).
+            var settings = Path.GetTempFileName();
+            File.WriteAllText(settings, """{"origins":["https://space.example:8100"],"bluetooth":true}""");
+            var read = Config.Read(settings);
+            File.WriteAllText(settings, """{"origins":["https://space.exa""");
+            var half = Config.Read(settings);
+            File.WriteAllText(settings, "");
+            var empty = Config.Read(settings);
+            File.Delete(settings);
+            Check(read is { Origins: ["https://space.example:8100"], Bluetooth: true, Serial: true } && half is null && empty is null
+                && !Config.Nobody.Allows("https://space.example:8100"), "settings: a broken file is refused, and without settings no page gets in");
+
             // Bluetooth: SALTO's advertisement and its packet framing (a device is needed for the rest).
             Check(Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x80, 1, 2, 3, 4, 5, 6, 0xAB]) == "010203040506AB" && Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x00, 1, 2, 3, 4, 5, 6, 7]) is null
                 && Ble.SaltoDevice([0x4C, 0x00, 1, 0, 0x80, 1, 2, 3, 4, 5, 6, 7]) is null, "Bluetooth advertisement: a ready SALTO device and its id");

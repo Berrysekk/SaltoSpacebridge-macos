@@ -17,19 +17,35 @@ public static class Server
 
     static Config config = new();
     static DateTime settingsWritten;
+    static readonly object settingsGate = new();
 
-    /// <summary>Takes the settings from disk when they have changed, so that `spacebridge allow` or `config` needs no restart.</summary>
+    /// <summary>Takes the settings from disk when they have changed, so that `spacebridge allow` or `config` needs no restart.
+    /// Only a file that reads whole replaces them: never the defaults, which let any website in.</summary>
     static void Settings()
     {
-        var written = File.GetLastWriteTimeUtc(Paths.ConfigFile);
-        if (written == settingsWritten) return;
-        var first = settingsWritten == default;
-        settingsWritten = written;
-        var bluetooth = config.Bluetooth;
-        config = Config.Load();
-        if (first) return;
-        Log.Info("Settings changed: " + Allowed() + $", Bluetooth {(config.Bluetooth ? "on" : "off")}, serial ports {(config.Serial ? "on" : "off")}");
-        if (config.Bluetooth && !bluetooth) AskBluetooth();
+        lock (settingsGate)
+        {
+            var written = File.GetLastWriteTimeUtc(Paths.ConfigFile);
+            if (written == settingsWritten) return;
+            var first = settingsWritten == default;
+            settingsWritten = written;
+            if (first)
+            {
+                config = Config.Read() ?? Config.Nobody;
+                if (config.Origins is ["(settings unreadable)"]) Log.Info("The settings cannot be read: no page may use the bridge. `spacebridge doctor` puts them right.");
+                return;
+            }
+            // Gone or broken while running: the last ones stay.
+            if (!File.Exists(Paths.ConfigFile) || Config.Read() is not { } read)
+            {
+                Log.Info("The settings are gone or cannot be read; the last ones stay. `spacebridge doctor` puts them right.");
+                return;
+            }
+            var bluetooth = config.Bluetooth;
+            config = read;
+            Log.Info("Settings changed: " + Allowed() + $", Bluetooth {(config.Bluetooth ? "on" : "off")}, serial ports {(config.Serial ? "on" : "off")}");
+            if (config.Bluetooth && !bluetooth) AskBluetooth();
+        }
     }
 
     static string Allowed() => config.Origins.Count == 0 ? "any website" : "only " + string.Join(" ", config.Origins);
