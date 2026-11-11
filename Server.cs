@@ -16,10 +16,36 @@ public static class Server
     public const string BridgeVersion = "2.1.0.0";
 
     static Config config = new();
+    static DateTime settingsWritten;
+
+    /// <summary>Takes the settings from disk when they have changed, so that `spacebridge allow` or `config` needs no restart.</summary>
+    static void Settings()
+    {
+        var written = File.GetLastWriteTimeUtc(Paths.ConfigFile);
+        if (written == settingsWritten) return;
+        var first = settingsWritten == default;
+        settingsWritten = written;
+        var bluetooth = config.Bluetooth;
+        config = Config.Load();
+        if (first) return;
+        Log.Info("Settings changed: " + Allowed() + $", Bluetooth {(config.Bluetooth ? "on" : "off")}, serial ports {(config.Serial ? "on" : "off")}");
+        if (config.Bluetooth && !bluetooth) AskBluetooth();
+    }
+
+    static string Allowed() => config.Origins.Count == 0 ? "any website" : "only " + string.Join(" ", config.Origins);
+
+    /// <summary>Asks macOS for the Bluetooth permission now, not in the middle of SPACE's two-second search for the bridge.</summary>
+    static void AskBluetooth() => Task.Run(() =>
+    {
+        var state = Ble.State(3000);
+        Log.Info("Bluetooth: " + Ble.StateName(state));
+        // Unknown while the question is open; say what came of it.
+        if (state == Ble.Unknown) Log.Info("Bluetooth: " + Ble.StateName(Ble.State(600_000)));
+    });
 
     public static int Run()
     {
-        config = Config.Load();
+        Settings();
         // The web app scans the first ten ports of every 110-port block from 50000.
         var ports = Enumerable.Range(0, 10).SelectMany(block => Enumerable.Range(50000 + 110 * block, 10)).Where(IsFree).Take(2).ToArray();
         if (ports.Length < 2)
@@ -50,6 +76,7 @@ public static class Server
 
         app.Use(async (context, next) =>
         {
+            Settings();
             var headers = context.Response.Headers;
             var origin = context.Request.Headers.Origin.FirstOrDefault();
             if (!config.Allows(origin))
@@ -144,19 +171,16 @@ public static class Server
         Directory.CreateDirectory(Paths.Folder);
         File.WriteAllText(Paths.StateFile, new JsonObject { ["pid"] = Environment.ProcessId, ["http"] = ports[0], ["https"] = certificate is null ? 0 : ports[1], ["version"] = Cli.Version }.ToJsonString());
         Log.Info($"Spacebridge {Cli.Version}: http://localhost:{ports[0]}" + (certificate is null ? "" : $", https://localhost:{ports[1]}")
-            + (config.Origins.Count == 0 ? ", any website" : ", only " + string.Join(" ", config.Origins)) + (SignKey.Present ? "" : ", NO SIGNING KEY"));
-        // Asks macOS for the Bluetooth permission now, not in the middle of SPACE's two-second search for the bridge.
-        if (config.Bluetooth) _ = Task.Run(() =>
-        {
-            var state = Ble.State(3000);
-            Log.Info("Bluetooth: " + Ble.StateName(state));
-            // Unknown while the question is open; say what came of it.
-            if (state == Ble.Unknown) Log.Info("Bluetooth: " + Ble.StateName(Ble.State(600_000)));
-        });
+            + ", " + Allowed() + (SignKey.Present ? "" : ", NO SIGNING KEY"));
+        if (config.Bluetooth) AskBluetooth();
         // The certificate lasts 90 days and is replaced with 30 to go; a Mac that slept through that gets a new one on waking.
         using var renewal = new Timer(_ => Certificate.Renew(), null, TimeSpan.FromHours(12), TimeSpan.FromHours(12));
         // A new release installs itself; the first look waits until the bridge has settled.
-        using var updates = new Timer(_ => Update.Automatic(config.AutoUpdate), null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(6));
+        using var updates = new Timer(_ =>
+        {
+            Settings();
+            Update.Automatic(config.AutoUpdate);
+        }, null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(6));
         app.Run();
         return 0;
     }

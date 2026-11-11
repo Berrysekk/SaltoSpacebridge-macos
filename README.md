@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/menu.svg" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service, Updates and Maintenance">
+  <img src="docs/menu.svg?v=2.0.3" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service, Updates and Maintenance">
 </p>
 
 SPACE runs in the browser, but encoders plug into your computer. SALTO's *Local IO Bridge* connects the two, and SALTO ships it for Windows only. Spacebridge is the same bridge for the Mac: SPACE finds it and uses it as if it were SALTO's own.

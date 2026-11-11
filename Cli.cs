@@ -322,18 +322,17 @@ public static partial class Cli
 
     static void Restart()
     {
-        if (!Loaded) Start();
-        else Launchctl("kickstart", "-k", Target);
+        if (!Loaded)
+        {
+            Start();
+            return;
+        }
+        Launchctl("kickstart", "-k", Target);
         WaitUntilUp();
     }
 
-    /// <summary>A changed setting takes effect when the service starts.</summary>
-    static void Apply()
-    {
-        if (!Loaded) return;
-        Restart();
-        Console.WriteLine(Dim("Service restarted."));
-    }
+    /// <summary>The service takes changed settings at its next request, without a restart: this is that request.</summary>
+    static void Apply() => Service();
 
     static void WaitUntilUp()
     {
@@ -561,7 +560,6 @@ public static partial class Cli
         {
             await SignKey.Import(source);
             Console.WriteLine("Signing key imported.");
-            Apply();
             return 0;
         }
         if (args.Length > 0 && args[0] != "status") throw new Failure("`key` takes the signing key from a SPACE address or from Setup_SaltoLocalIOBridge.exe.", "spacebridge key import https://space.example:8100");

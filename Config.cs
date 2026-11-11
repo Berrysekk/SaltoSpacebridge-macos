@@ -32,7 +32,7 @@ public static class Paths
     public static string Short(string path) => path.StartsWith(home) ? "~" + path[home.Length..] : path;
 }
 
-/// <summary>What `spacebridge allow` and `spacebridge config` change; the service reads it when it starts.</summary>
+/// <summary>What `spacebridge allow` and `spacebridge config` change; the service reads it again whenever the file changes.</summary>
 public sealed class Config
 {
     /// <summary>The SPACE addresses that may use the bridge, as a browser sends them in Origin. Empty: any website, as SALTO's bridge.</summary>
