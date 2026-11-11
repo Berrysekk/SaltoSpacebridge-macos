@@ -27,10 +27,12 @@ public static partial class Cli
     const string Help = """
         Usage: spacebridge [command]
 
-        Without a command, in a terminal: a menu of all of this. Arrows move, Enter picks, Esc goes back.
+        Without a command, in a terminal: a menu of all of this (the first time, the guided setup).
+        Arrows move, Enter picks, Esc goes back.
 
         Set up
-          setup <SPACE address>       Everything in one go: SALTO's signing key from that SPACE, allow it, install the service
+          setup                       Guided setup: your SPACE, who may use the bridge, devices, the service
+          setup <SPACE address>       The same without questions: SALTO's signing key from that SPACE, allow it, install the service
           install                     Install or update the background service and trust its https certificate
           uninstall [--all]           Remove the service (--all: settings and signing key too)
           key import <address|file>   Take the signing key from a SPACE server or from Setup_SaltoLocalIOBridge.exe
@@ -96,6 +98,17 @@ public static partial class Cli
     static async Task<int> Setup(string[] args)
     {
         var source = args.FirstOrDefault(a => !a.StartsWith('-'));
+        if (source is null && !Console.IsInputRedirected && !Console.IsOutputRedirected)
+        {
+            if (!await FullScreen(() => Onboarding()))
+            {
+                Console.WriteLine("Setup left unfinished. Run `spacebridge setup` when you are ready.");
+                return 1;
+            }
+            var code = Status();
+            Console.WriteLine("\n" + string.Join("\n", Wrap(Ready, 78)));
+            return code;
+        }
         if (source is null && !SignKey.Present)
             throw new ArgumentException("Give the address of your SPACE, for example: spacebridge setup https://space.example:8100");
         if (source is not null && !SignKey.Present)
@@ -300,7 +313,7 @@ public static partial class Cli
             if (service.Version != Version) rows.Add(("", Yellow($"the service is version {service.Version}; `spacebridge install` updates it to {Version}")));
         }
         else if (File.Exists(Paths.Plist)) rows.Add(("Service", $"{Red("●")} not running{Hint("spacebridge start · spacebridge logs")}"));
-        else rows.Add(("Service", $"{Dim("○")} not installed{Hint("spacebridge setup <SPACE address>")}"));
+        else rows.Add(("Service", $"{Dim("○")} not installed{Hint("spacebridge setup")}"));
 
         if (File.Exists(Paths.CertificateFile))
         {

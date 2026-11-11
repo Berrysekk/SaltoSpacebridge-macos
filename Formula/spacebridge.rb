@@ -18,8 +18,8 @@ class Spacebridge < Formula
 
   def caveats
     <<~EOS
-      Set the bridge up for your SPACE (fetches SALTO's signing key from it, installs the background service):
-        spacebridge setup https://your-space:8100
+      Set the bridge up for your SPACE (a few questions, then the background service):
+        spacebridge setup
       After an upgrade, update the service:
         spacebridge install
     EOS
