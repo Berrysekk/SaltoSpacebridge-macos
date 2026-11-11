@@ -76,12 +76,10 @@ SALTO's bridge answers any web page that asks, so a page you happen to visit cou
 
 | Device | State |
 |---|---|
-| USB encoder, PPD | 🟡 Found and listed; a full session with real hardware is not confirmed yet |
+| USB encoder, PPD | 🟢 Tested with SPACE 6.12 and 6.13 |
 | nCoder | 🟡 Untested |
 | Serial encoders | 🟡 Tested against a simulated port only |
 | Bluetooth LE | 🟠 Off by default; not yet tried with a SALTO device |
-
-Tried with SPACE 6.12 and 6.13.
 
 ## Troubleshooting
 
