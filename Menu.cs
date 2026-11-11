@@ -20,14 +20,32 @@ public static partial class Cli
     static string Grey(string s) => Paint("38;5;240", s);
     static string Selected(string s) => Paint("1;38;5;231;48;5;25", s);
 
-    static async Task<int> Menu()
+    /// <summary>Runs screens on the alternate screen, without a cursor; the terminal comes back as it was, also after Ctrl+C.</summary>
+    static async Task<T> FullScreen<T>(Func<Task<T>> screens)
     {
-        // The alternate screen, without a cursor; the terminal comes back as it was, also after Ctrl+C.
-        void Leave() => Console.Write("\e[?25h\e[?1049l");
+        static void Leave() => Console.Write("\e[?25h\e[?1049l");
+        ConsoleCancelEventHandler restore = (_, _) => Leave();
         Console.Write("\e[?1049h\e[?25l");
-        Console.CancelKeyPress += (_, _) => Leave();
+        Console.CancelKeyPress += restore;
         try
         {
+            return await screens();
+        }
+        finally
+        {
+            Console.CancelKeyPress -= restore;
+            Leave();
+        }
+    }
+
+    static bool IsSetUp => File.Exists(Paths.Plist) && SignKey.Present;
+
+    static async Task<int> Menu()
+    {
+        await FullScreen(async () =>
+        {
+            // The first run starts with the guided setup; leaving it leads to the menu.
+            var note = !IsSetUp && await Onboarding() ? Ready : "";
             // Read once a round, by the items; the panel above them shows the same moment.
             var config = Config.Load();
             ServiceState? service = null;
@@ -48,8 +66,8 @@ public static partial class Cli
                     var running = service is { Answers: true };
                     var refused = Refused().Except(config.Origins).Count();
                     var items = new List<Item>();
-                    if (!File.Exists(Paths.Plist) || !SignKey.Present)
-                        items.Add(Asked("Set up for your SPACE…", address => Setup([address]), SpacePrompt, Dim("signing key, allow-list and service in one go"), "Set up"));
+                    if (!IsSetUp)
+                        items.Add(new("Set up…", async () => await Onboarding(welcome: false) ? Ready : "", Dim("your SPACE, who may use the bridge, devices, the service"), "Set up"));
                     items.AddRange(
                     [
                         new("Allowed addresses", OriginsMenu, (config.Origins.Count == 0 ? Yellow("any website") : $"{config.Origins.Count} address{(config.Origins.Count == 1 ? "" : "es")}")
@@ -69,12 +87,9 @@ public static partial class Cli
                         Shown("Self-test", SelfTest.Run, Dim("checks the bridge's own workings"), "Diagnostics"),
                     ]);
                     return items;
-                }, root: true);
-        }
-        finally
-        {
-            Leave();
-        }
+                }, root: true, note: note);
+            return 0;
+        });
         if (farewell is not null) Console.Write(farewell);
         return 0;
     }
@@ -173,9 +188,8 @@ public static partial class Cli
     // ---- the pieces every screen is made of ----
 
     /// <summary>A menu that stays until Esc; what an item reports shows above it on the next round.</summary>
-    static async Task<string?> Level(Func<(string Title, string Right, List<string> Rows)> head, Func<List<Item>> items, bool root = false)
+    static async Task<string?> Level(Func<(string Title, string Right, List<string> Rows)> head, Func<List<Item>> items, bool root = false, string note = "")
     {
-        var note = "";
         for (var at = 0; farewell is null;)
         {
             var list = items();
@@ -235,11 +249,11 @@ public static partial class Cli
     }
 
     /// <summary>A line of text from the user, or null when they press Esc or leave it empty.</summary>
-    static string? Ask(string title, string prompt)
+    static string? Ask(string title, string prompt, string initial = "", string right = "")
     {
-        Draw([.. Box(title, "", [.. prompt.Split('\n')]), "", Hints(("⏎", "confirm"), ("esc", "cancel")), "", "  " + Accent("›") + " "]);
+        Draw([.. Box(title, right, [.. prompt.Split('\n')]), "", Hints(("⏎", "confirm"), ("esc", "cancel")), "", "  " + Accent("›") + " " + initial]);
         Console.Write("\e[?25h");
-        var text = new StringBuilder();
+        var text = new StringBuilder(initial);
         try
         {
             while (true)
@@ -267,19 +281,21 @@ public static partial class Cli
     }
 
     /// <summary>Runs a command under its title and leaves its output on screen until Enter or Esc.</summary>
-    static async Task Show(string title, Func<Task<int>> command)
+    static async Task<bool> Show(string title, Func<Task<int>> command, string done = "back")
     {
         Console.Write($"\e[H\e[J {Bold(Accent(title))}\n {Grey(new string('─', Wide()))}\n\n");
+        var worked = false;
         try
         {
-            await command();
+            worked = await command() == 0;
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
             Console.WriteLine(Red("✗ ") + e.Message);
         }
-        Console.Write("\n" + Hints(("⏎ esc ←", "back")));
+        Console.Write("\n" + Hints(("⏎ esc ←", done)));
         while (Console.ReadKey(true).Key is not (ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.LeftArrow or ConsoleKey.Q)) { }
+        return worked;
     }
 
     /// <summary>What a command prints, as text.</summary>
