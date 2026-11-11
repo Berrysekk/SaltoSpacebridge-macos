@@ -33,22 +33,33 @@ Apple silicon, macOS 13 or later.
 ```sh
 brew tap berrysekk/spacebridge https://github.com/Berrysekk/SaltoSpacebridge-macos
 brew install spacebridge
-spacebridge setup https://your-space:8100
+spacebridge
 ```
 
 **One command**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://your-space:8100
+curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh
 ```
 
-`https://your-space:8100` stands for the address of your own SPACE; put that in its place.
+The command lands in a directory that is already on your PATH (`/usr/local/bin` on a new Mac, for which macOS asks your password once), so `spacebridge` works in the same terminal right away. An upgrade through the same command keeps your settings and only updates the service.
 
 > [!NOTE]
 > While this repository is private, both ways need a GitHub login that can read it. Without one, download `spacebridge-<version>-macos-arm64.tar.gz` from [Releases](../../releases) and run
-> `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.0.1-macos-arm64.tar.gz sh install.sh https://your-space:8100`.
+> `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.0.1-macos-arm64.tar.gz sh install.sh`.
 
-`setup` takes the address of your SPACE exactly as you type it in the browser, and does three things:
+**Setting it up**
+
+Both ways end in a guided setup (later: `spacebridge setup`, or the first `spacebridge`). It asks, one screen each, with **Esc** to go back:
+
+1. **Your SPACE**, the address exactly as you type it in the browser, like `https://space.example:8100`. If that SPACE does not hand out SALTO's installer, you can point it at a downloaded `Setup_SaltoLocalIOBridge.exe` instead.
+2. **Who may use the bridge**: only your SPACE, or any website as with SALTO's own bridge.
+3. **Devices**: serial ports and Bluetooth on or off.
+4. **Install**: a summary, then the service.
+
+For scripts, the address skips the questions: `spacebridge setup https://space.example:8100`, or `… | sh -s -- https://space.example:8100`.
+
+Behind those screens, setup does three things:
 
 | | |
 |---|---|
@@ -64,7 +75,7 @@ Then log in to SPACE again. The first time, the browser asks whether the SPACE p
 spacebridge
 ```
 
-Run without a command, Spacebridge opens the menu in the picture above. **↑ ↓** move, **Enter** or **→** picks, **Esc** or **←** goes back.
+Run without a command, Spacebridge opens the menu in the picture above (the very first time, the guided setup comes before it). **↑ ↓** move, **Enter** or **→** picks, **Esc** or **←** goes back.
 
 | Section | What is there |
 |---|---|
@@ -83,7 +94,8 @@ Everything in the menu is also a command, for scripts and for the impatient.
 | Command | |
 |---|---|
 | `spacebridge status` | What is running, what is allowed, which devices are attached |
-| `spacebridge setup <address>` | Key, allow-list and service in one go |
+| `spacebridge setup` | Guided setup: your SPACE, who may use the bridge, devices, the service |
+| `spacebridge setup <address>` | The same without questions: key, allow-list and service in one go |
 | `spacebridge devices [--bluetooth]` | Encoders, PPDs, nCoders and serial ports; `--bluetooth` listens 15 s for SALTO devices |
 | `spacebridge logs [-f] [-n N] [--all]` | Which page asked for what, and what it got |
 | `spacebridge start` · `stop` · `restart` | The background service |
@@ -124,7 +136,7 @@ spacebridge allow https://space.example:8100 http://10.0.0.5:8100
 - A connection can only lead back to the page's own server.
 - Everything else is refused, and shows up in the menu and in `spacebridge status` with the way to let it in.
 
-`spacebridge allow --any` goes back to SALTO's behaviour. `setup <address>` puts its address on the list.
+`spacebridge allow --any` goes back to SALTO's behaviour. `setup` puts your SPACE on the list (unless you chose any website).
 
 Independently of the list, the bridge listens on loopback only and refuses requests addressed to any name but `localhost`, `127.0.0.1` or `[::1]`.
 
