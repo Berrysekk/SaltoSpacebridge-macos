@@ -5,7 +5,7 @@ SALTO's **Local IO Bridge** for macOS. ProAccess SPACE runs in the browser, but 
 Not affiliated with or endorsed by SALTO Systems.
 
 ```
-$ spacebridge
+$ spacebridge status
 Spacebridge 1.0.0 · SALTO Local IO Bridge 2.1.0.0 for macOS
 
   Service      ● running (pid 2437)  http://localhost:50000  https://localhost:50001
@@ -48,7 +48,8 @@ Then log in to SPACE again. The first time, the browser asks whether the SPACE p
 
 | | |
 |---|---|
-| `spacebridge` or `spacebridge status` | What is running, what is allowed, which devices are attached |
+| `spacebridge` | A menu of everything below: arrows move, Enter picks, Esc goes back |
+| `spacebridge status` | What is running, what is allowed, which devices are attached |
 | `spacebridge devices [--bluetooth]` | Encoders, PPDs, nCoders and serial ports; `--bluetooth` listens 15 s for SALTO devices |
 | `spacebridge logs [-f] [-n N] [--all]` | Which page asked for what, and what it got |
 | `spacebridge start` / `stop` / `restart` | The background service |

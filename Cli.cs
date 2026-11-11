@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace SaltoBridge;
 
 /// <summary>The `spacebridge` command: sets the bridge up, shows what it is doing and holds its settings.</summary>
-public static class Cli
+public static partial class Cli
 {
     public static readonly string Version =
         typeof(Cli).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "dev";
@@ -25,7 +25,9 @@ public static class Cli
     static string Target => $"{Domain}/{Paths.Label}";
 
     const string Help = """
-        Usage: spacebridge <command>
+        Usage: spacebridge [command]
+
+        Without a command, in a terminal: a menu of all of this. Arrows move, Enter picks, Esc goes back.
 
         Set up
           setup <SPACE address>       Everything in one go: SALTO's signing key from that SPACE, allow it, install the service
@@ -34,7 +36,7 @@ public static class Cli
           key import <address|file>   Take the signing key from a SPACE server or from Setup_SaltoLocalIOBridge.exe
 
         Use
-          status                      What is running, what is allowed, which devices are attached (the default)
+          status                      What is running, what is allowed, which devices are attached
           devices [--bluetooth]       Encoders, PPDs, nCoders and serial ports; --bluetooth listens 15 s for SALTO devices
           logs [-f] [-n N] [--all]    The service's log: which page asked for what
           start | stop | restart      The background service
@@ -57,15 +59,17 @@ public static class Cli
         var rest = args.Skip(1).ToArray();
         try
         {
+            if (args.Length == 0 && !Console.IsInputRedirected && !Console.IsOutputRedirected) return await Menu();
             switch (args.FirstOrDefault() ?? "status")
             {
                 case "run": return Server.Run();
                 case "status": return Status();
+                case "menu": return await Menu();
                 case "setup": return await Setup(rest);
                 case "install": Install(); return Status();
                 case "uninstall": return Uninstall(rest.Contains("--all"));
                 case "start": Start(); return Status();
-                case "stop": Launchctl("bootout", Target); Console.WriteLine("Stopped (until the next login; `spacebridge uninstall` removes it)."); return 0;
+                case "stop": return Stop();
                 case "restart": Restart(); return Status();
                 case "devices": return await Devices(rest.Contains("--bluetooth"));
                 case "logs": return Logs(rest);
@@ -214,6 +218,13 @@ public static class Cli
         if (!Loaded) Launchctl("bootstrap", Domain, Paths.Plist);
         else Launchctl("kickstart", Target);
         WaitUntilUp();
+    }
+
+    static int Stop()
+    {
+        Launchctl("bootout", Target);
+        Console.WriteLine("Stopped (until the next login; `spacebridge uninstall` removes it).");
+        return 0;
     }
 
     static void Restart()

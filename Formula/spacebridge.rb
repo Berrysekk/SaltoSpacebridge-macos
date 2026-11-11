@@ -5,7 +5,7 @@ class Spacebridge < Formula
   homepage "https://github.com/totosoftsro/SaltoSpacebridge-macos"
   url "https://github.com/totosoftsro/SaltoSpacebridge-macos/releases/download/v1.0.0/spacebridge-1.0.0-macos-arm64.tar.gz"
   version "1.0.0"
-  sha256 "198dc132d0c75e284d1d4262f2f19f3af2933a6e44ad50ceab6a8a2355311098"
+  sha256 "4d6de57911cb1fa4b69fc8c98c0253366145b8ddbe31b8c186970b55423ac849"
 
   depends_on arch: :arm64
   depends_on :macos
