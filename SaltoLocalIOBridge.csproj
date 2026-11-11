@@ -9,10 +9,13 @@
     <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Not compressed: a compressed bundle crashed in the runtime at the first socket event, about once in 15 starts (macOS 27). -->
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The current servicing release, not the 9.0.6 the SDK carries. -->
+    <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="9.0.23" />
+    <FrameworkReference Update="Microsoft.AspNetCore.App" RuntimeFrameworkVersion="9.0.23" />
     <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
       <_Parameter1>macos</_Parameter1>
     </AssemblyAttribute>
