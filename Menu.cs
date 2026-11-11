@@ -142,7 +142,7 @@ public static partial class Cli
                 var screen = Box("Live log", Paths.Short(Paths.Log), []);
                 screen.RemoveAt(screen.Count - 1);
                 screen.AddRange(shown.TakeLast(Math.Max(5, Console.WindowHeight - 4)).Select(l => " " + Tint(l)));
-                Draw([.. screen, "", Hints(("a", all ? "requests only" : "all lines"), ("esc", "back"))]);
+                Draw([.. screen, "", Hints(("a", all ? "requests only" : "all lines"), ("esc ←", "back"))]);
                 changed = false;
             }
             if (!Console.KeyAvailable)
@@ -152,7 +152,7 @@ public static partial class Cli
             }
             switch (Console.ReadKey(true).Key)
             {
-                case ConsoleKey.Escape or ConsoleKey.Enter or ConsoleKey.Q: return Task.FromResult<string?>("");
+                case ConsoleKey.Escape or ConsoleKey.LeftArrow or ConsoleKey.Enter or ConsoleKey.Q: return Task.FromResult<string?>("");
                 case ConsoleKey.A: (all, changed) = (!all, true); break;
             }
         }
@@ -216,7 +216,7 @@ public static partial class Cli
                     ? $" {section}{Selected(Pad($" ❯ {item.Label.PadRight(labels)}{Plain(item.Value)}", Wide() - sections))}"
                     : $" {section}   {item.Label.PadRight(labels)}{item.Value}");
             }
-            Draw([.. lines, "", Hints(("↑↓", "move"), ("⏎", "select"), ("esc", root ? "quit" : "back"))]);
+            Draw([.. lines, "", Hints(("↑↓", "move"), ("⏎ →", "select"), root ? ("esc", "quit") : ("esc ←", "back"))]);
             while (!Console.KeyAvailable)
             {
                 if (root && Environment.TickCount64 > due) return Refresh;
@@ -226,8 +226,10 @@ public static partial class Cli
             {
                 case ConsoleKey.UpArrow: at = (at + items.Count - 1) % items.Count; break;
                 case ConsoleKey.DownArrow: at = (at + 1) % items.Count; break;
-                case ConsoleKey.Enter: return at;
+                case ConsoleKey.Enter or ConsoleKey.RightArrow: return at;
                 case ConsoleKey.Escape or ConsoleKey.Q: return -1;
+                // On the main screen ← does nothing: one press too many on the way back should not quit.
+                case ConsoleKey.LeftArrow when !root: return -1;
             }
         }
     }
@@ -276,8 +278,8 @@ public static partial class Cli
         {
             Console.WriteLine(Red("✗ ") + e.Message);
         }
-        Console.Write("\n" + Hints(("⏎", "back")));
-        while (Console.ReadKey(true).Key is not (ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.Q)) { }
+        Console.Write("\n" + Hints(("⏎ esc ←", "back")));
+        while (Console.ReadKey(true).Key is not (ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.LeftArrow or ConsoleKey.Q)) { }
     }
 
     /// <summary>What a command prints, as text.</summary>
