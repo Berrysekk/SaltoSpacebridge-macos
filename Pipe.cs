@@ -60,7 +60,7 @@ public sealed class Pipe
         var uri = new UriBuilder(new Uri(server));
         // SPACE on this very machine is reached over loopback, as the Windows bridge does.
         if (!forceTrusted && IsThisMachine(uri.Host)) uri.Host = "127.0.0.1";
-        var signature = Convert.ToHexString(HMACSHA1.HashData(SignConsts.KeyData, Encoding.UTF8.GetBytes(token)));
+        var signature = Convert.ToHexString(HMACSHA1.HashData(SignKey.Data, Encoding.UTF8.GetBytes(token)));
         uri.Path = uri.Path.TrimEnd('/') + "/" + Convert.ToBase64String(Encoding.UTF8.GetBytes(token.TrimStart('/') + ":" + signature));
         if (uri.Port < 1) throw new ArgumentException("Wrong websocket port number");
         if (string.IsNullOrEmpty(uri.Host)) throw new ArgumentException("Wrong websocket hostname");

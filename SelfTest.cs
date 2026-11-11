@@ -7,7 +7,7 @@ using System.Text;
 
 namespace SaltoBridge;
 
-/// <summary>`SaltoLocalIOBridge --selftest`: the parts SPACE depends on, against a fake device and a fake SPACE.</summary>
+/// <summary>`spacebridge selftest`: the parts SPACE depends on, against a fake device and a fake SPACE.</summary>
 public static class SelfTest
 {
     sealed class FakeDevice : ILocal
@@ -32,6 +32,8 @@ public static class SelfTest
     {
         try
         {
+            // The real key stays out of it: what is checked is the signing, not the key.
+            SignKey.Override = "selftest"u8.ToArray();
             // Port ids as the Windows bridge 2.1.0 encodes them (its own Base62Encoding, run on the same input).
             Check(Discovery.Id("0") == "LNDYBJ0" && Discovery.Id("04A3F2B19C5E80") == "LNDYBJ0qGJD6Ca8nEKCrHJWm0", "port ids match the Windows bridge");
 
@@ -66,7 +68,7 @@ public static class SelfTest
             await Pipe.Create(port, server, token, 1, false);
             Check(Pipe.IsOpen(port.Id), "pipe opens");
 
-            var signature = Convert.ToHexString(HMACSHA1.HashData(SignConsts.KeyData, Encoding.UTF8.GetBytes(token)));
+            var signature = Convert.ToHexString(HMACSHA1.HashData(SignKey.Data, Encoding.UTF8.GetBytes(token)));
             Check(signature.Length == 40 && path == "/localiobridge/" + Convert.ToBase64String(Encoding.UTF8.GetBytes("tok+en:" + signature)), "SPACE gets the signed token: " + path);
             Check(device.Written.TryTake(out var down, 2000) && down.SequenceEqual(new byte[] { 1, 2, 3 }), "SPACE -> device");
             device.Incoming.Add([9, 8]);
@@ -93,6 +95,24 @@ public static class SelfTest
                 adapter.Write([7]);
                 Check(got.SequenceEqual(new byte[] { 5, 6 }) && serial.Read() is [7] && serial.Read() is null, "serial port: both directions, and an empty read returns");
             }
+
+            Check(Config.Origin("HTTPS://Space.Example:8100/ProAccessSpace/") == "https://space.example:8100" && Config.Origin("http://10.0.0.5:8100") == "http://10.0.0.5:8100", "SPACE addresses become origins");
+            var listed = new Config { Origins = ["https://space.example:8100"] };
+            Check(listed.Allows("https://space.example:8100") && !listed.Allows("https://evil.example") && listed.Allows(null) && new Config().Allows("https://evil.example"), "the allow-list lets in only listed pages");
+
+            // Bluetooth: SALTO's advertisement and its packet framing (a device is needed for the rest).
+            Check(Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x80, 1, 2, 3, 4, 5, 6, 0xAB]) == "010203040506AB" && Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x00, 1, 2, 3, 4, 5, 6, 7]) is null
+                && Ble.SaltoDevice([0x4C, 0x00, 1, 0, 0x80, 1, 2, 3, 4, 5, 6, 7]) is null, "Bluetooth advertisement: a ready SALTO device and its id");
+            var packets = new List<byte[]>();
+            var sender = new LowPan(packets.Add, 23);
+            var receiver = new LowPan(_ => { }, 23);
+            var longMessage = Enumerable.Range(0, 200).Select(i => (byte)i).ToArray();
+            sender.Send([1, 2, 3]);
+            sender.Send(longMessage);
+            sender.Send(longMessage);
+            var composed = packets.Select(receiver.Compose).Where(m => m is not null).ToList();
+            Check(packets.All(p => p.Length <= 23) && packets.Count > 10 && composed.Count == 3 && composed[0]!.SequenceEqual(new byte[] { 1, 2, 3 })
+                && composed[1]!.SequenceEqual(longMessage) && composed[2]!.SequenceEqual(longMessage), "Bluetooth framing: short and fragmented messages");
 
             // With an encoder, PPD or nCoder on USB: that it can be claimed (nothing is sent to it).
             var attached = Discovery.All().Where(p => p.Type == 0).ToList();

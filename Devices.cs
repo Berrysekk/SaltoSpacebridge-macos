@@ -11,12 +11,12 @@ public interface ILocal : IDisposable
     void Write(byte[] data);
 }
 
-/// <summary>Type is the bridge's PortType: 0 Usb, 1 Serial. Device type as the web app's TargetDeviceType: 0 encoder, 1 PPD, 2 nCoder, -1 unknown.</summary>
+/// <summary>Type is the bridge's PortType: 0 Usb, 1 Serial, 2 Bluetooth. Device type as the web app's TargetDeviceType: 0 encoder, 1 PPD, 2 nCoder, 3 Bluetooth device, -1 unknown.</summary>
 public sealed record Port(string Id, int DeviceType, string Name, string Info, Func<ILocal> Open, int Type = 0);
 
 public static class Discovery
 {
-    public static List<Port> All()
+    public static List<Port> All(bool serialPorts = true)
     {
         var ports = new List<Port>();
         try
@@ -47,7 +47,7 @@ public static class Discovery
         {
             Log.Once("HID discovery failed: " + e.Message);
         }
-        foreach (var path in Directory.GetFiles("/dev", "cu.*").Order())
+        foreach (var path in serialPorts ? Directory.GetFiles("/dev", "cu.*").Order() : Enumerable.Empty<string>())
         {
             var name = Path.GetFileName(path);
             // macOS's own pseudo ports, never an encoder.

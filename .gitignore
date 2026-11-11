@@ -1,4 +1,5 @@
 bin/
 obj/
 dist/
-SignConsts.cs
+lib/libspacebridge-ble.dylib
+.DS_Store

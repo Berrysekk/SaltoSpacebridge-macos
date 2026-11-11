@@ -4,24 +4,29 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>SaltoLocalIOBridge</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>spacebridge</AssemblyName>
     <RootNamespace>SaltoBridge</RootNamespace>
+    <Version>1.0.0</Version>
     <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <!-- Not compressed: a compressed bundle crashed in the runtime at the first socket event, about once in 15 starts (macOS 27). -->
+    <DebugType>none</DebugType>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
       <_Parameter1>macos</_Parameter1>
     </AssemblyAttribute>
-    <!-- The same HidSharp the Windows bridge ships; it has a macOS (IOKit) backend. -->
+    <!-- The same HidSharp the Windows bridge ships (Apache-2.0); it has a macOS (IOKit) backend. -->
     <Reference Include="HidSharp">
       <HintPath>lib/HidSharp.dll</HintPath>
     </Reference>
-    <!-- Homebrew libusb 1.0.30 (LGPL-2.1), loaded from next to the executable. -->
-    <None Include="lib/libusb-1.0.0.dylib" Link="libusb-1.0.0.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- libusb 1.0.30 from Homebrew (LGPL-2.1) and the CoreBluetooth helper build.sh compiles, loaded from next to the executable. -->
+    <None Include="lib/*.dylib" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Compile Remove="dist/**;ble/**" />
   </ItemGroup>
 
 </Project>
