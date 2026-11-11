@@ -3,9 +3,9 @@
 class Spacebridge < Formula
   desc "SALTO ProAccess SPACE Local IO Bridge for macOS"
   homepage "https://github.com/Berrysekk/spacebridge"
-  url "https://github.com/Berrysekk/spacebridge/releases/download/v2.0.2/spacebridge-2.0.2-macos-arm64.tar.gz"
-  version "2.0.2"
-  sha256 "02bb38e97ce662c717c9d6feafadb6aabf5e4722b87078d3374b3c0d1a59dd95"
+  url "https://github.com/Berrysekk/spacebridge/releases/download/v2.0.3/spacebridge-2.0.3-macos-arm64.tar.gz"
+  version "2.0.3"
+  sha256 "bc3f8b9b147470e4f41c8fb6b6ef9b3cbdf394c0a1bc9ff534f82d3d17daa6f2"
 
   depends_on arch: :arm64
   depends_on :macos

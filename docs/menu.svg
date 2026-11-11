@@ -6,7 +6,7 @@
 <g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14" xml:space="preserve">
 <path d="M32.6 69 V63.5 Q32.6 58.5 37.6 58.5 H36.8" stroke="#6e7681" fill="none"/>
 <path d="M36.8 58.5 H45.2" stroke="#6e7681"/>
-<text x="53.6" y="63" textLength="142.8" lengthAdjust="spacing" fill="#58a6ff" font-weight="700">Spacebridge 2.0.2</text>
+<text x="53.6" y="63" textLength="142.8" lengthAdjust="spacing" fill="#58a6ff" font-weight="700">Spacebridge 2.0.3</text>
 <path d="M204.8 58.5 H473.6" stroke="#6e7681"/>
 <text x="482.0" y="63" textLength="243.6" lengthAdjust="spacing" fill="#8b949e">SALTO Local IO Bridge 2.1.0.0</text>
 <path d="M734.0 58.5 H742.4" stroke="#6e7681"/>
