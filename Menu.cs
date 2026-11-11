@@ -197,9 +197,7 @@ public static partial class Cli
         {
             var list = items();
             var (title, right, rows) = head();
-            var top = Box(title, right, rows);
-            if (note.Length > 0) top.AddRange(["", .. note.Split('\n').SelectMany(l => Wrap(l, Wide() - 2)).Select(l => "  " + l)]);
-            var picked = Pick(top, list, ref at, root);
+            var picked = Pick(Box(title, right, rows), list, ref at, root, note);
             if (picked == Refresh) continue;
             if (picked < 0) break;
             try
@@ -216,24 +214,27 @@ public static partial class Cli
     }
 
     /// <summary>Draws the menu and waits for a choice: its index, -1 for Esc, or Refresh when the main screen is due for a fresh look.</summary>
-    static int Pick(List<string> top, List<Item> items, ref int at, bool root)
+    static int Pick(List<string> top, List<Item> items, ref int at, bool root, string note = "")
     {
         at = Math.Clamp(at, 0, items.Count - 1);
-        var sections = items.Any(i => i.Section.Length > 0) ? 13 : 0;
         var labels = Math.Max(22, items.Max(i => i.Label.Length)) + 2;
         var due = Environment.TickCount64 + 3000;
         while (true)
         {
-            var lines = new List<string>(top) { "" };
+            // The box on top and the items share one frame; every section starts at a rule that carries its name.
+            var lines = top[..^1];
+            var focus = 0;
             for (var i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                var section = Accent((i == 0 || items[i - 1].Section != item.Section ? item.Section.ToUpperInvariant() : "").PadRight(sections));
-                lines.Add(i == at
-                    ? $" {section}{Selected(Pad($" ❯ {item.Label.PadRight(labels)}{Plain(item.Value)}", Wide() - sections))}"
-                    : $" {section}   {item.Label.PadRight(labels)}{item.Value}");
+                if (i == 0 || items[i - 1].Section != item.Section) lines.Add(Rule(item.Section));
+                if (i == at) focus = lines.Count;
+                var row = (i == at ? " ❯ " : "   ") + item.Label.PadRight(labels);
+                lines.Add($" {Grey("│")} {(i == at ? Selected(Pad(row + Plain(item.Value), Wide() - 4)) : Pad(row + item.Value, Wide() - 4))} {Grey("│")}");
             }
-            Draw([.. lines, "", Hints(("↑↓", "move"), ("⏎ →", "select"), root ? ("esc", "quit") : ("esc ←", "back"))]);
+            lines.Add(top[^1]);
+            if (note.Length > 0) lines.AddRange(["", .. note.Split('\n').SelectMany(l => Wrap(l, Wide() - 2)).Select(l => "  " + l), ""]);
+            Draw([.. lines, Hints(("↑↓", "move"), ("⏎ →", "select"), root ? ("esc", "quit") : ("esc ←", "back"))], focus);
             while (!Console.KeyAvailable)
             {
                 if (root && Environment.TickCount64 > due) return Refresh;
@@ -406,11 +407,17 @@ public static partial class Cli
         return lines;
     }
 
-    /// <summary>Paints a whole screen over the last one, without a flash of empty screen in between.</summary>
-    // shortcut: a window with fewer rows than the screen has lines scrolls; add a scrolling menu if a screen ever outgrows 24 rows.
-    static void Draw(List<string> lines)
+    /// <summary>The line between two parts of a frame, with the name of the part it opens.</summary>
+    static string Rule(string title) => title.Length == 0 ? $" {Grey("├" + new string('─', Wide() - 2) + "┤")}"
+        : $" {Grey("├─")} {Accent(title)} {Grey(new string('─', Math.Max(1, Wide() - 5 - title.Length)) + "┤")}";
+
+    /// <summary>Paints a whole screen over the last one, without a flash of empty screen in between.
+    /// A window with fewer rows than the screen has lines shows the part around the selected one.</summary>
+    static void Draw(List<string> lines, int focus = 0)
     {
         var width = (Console.WindowWidth > 0 ? Console.WindowWidth : 80) - 1;
+        var height = Console.WindowHeight > 0 ? Console.WindowHeight : 24;
+        if (lines.Count > height) lines = lines.GetRange(Math.Clamp(focus - height / 2, 0, lines.Count - height), height);
         Console.Write("\e[H" + string.Join("\e[K\n", lines.Select(l => Fit(l, width))) + "\e[K\e[J");
     }
 }

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 771 507" width="771" height="507" role="img" aria-label="spacebridge">
-<rect width="771" height="507" rx="12" fill="#0d1117" stroke="#30363d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 771 570" width="771" height="570" role="img" aria-label="spacebridge">
+<rect width="771" height="570" rx="12" fill="#0d1117" stroke="#30363d"/>
 <path d="M0 38 H771" stroke="#21262d"/>
 <circle cx="22" cy="19" r="6" fill="#ff5f57"/><circle cx="42" cy="19" r="6" fill="#febc2e"/><circle cx="62" cy="19" r="6" fill="#28c840"/>
 <text x="385" y="24" text-anchor="middle" fill="#8b949e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13">spacebridge</text>
@@ -28,46 +28,92 @@
 <text x="45.2" y="126" textLength="58.8" lengthAdjust="spacing" fill="#e6edf3">Devices</text>
 <text x="154.4" y="126" textLength="285.6" lengthAdjust="spacing" fill="#8b949e">no encoder, PPD or nCoder attached</text>
 <path d="M746.6 111 V132" stroke="#6e7681" fill="none"/>
-<path d="M32.6 132 V137.5 Q32.6 142.5 37.6 142.5 H36.8" stroke="#6e7681" fill="none"/>
-<path d="M36.8 142.5 H742.4" stroke="#6e7681"/>
-<path d="M742.4 142.5 H741.6 Q746.6 142.5 746.6 137.5 V132" stroke="#6e7681" fill="none"/>
-<rect x="137.6" y="174" width="613.2" height="21" rx="4" fill="#1f6feb"/>
-<text x="28.4" y="189" textLength="50.4" lengthAdjust="spacing" fill="#58a6ff">ACCESS</text>
-<text x="150.2" y="189" text-anchor="middle" fill="#ffffff" font-weight="700">❯</text>
-<text x="162.8" y="189" textLength="142.8" lengthAdjust="spacing" fill="#ffffff" font-weight="700">Allowed addresses</text>
-<text x="364.4" y="189" textLength="92.4" lengthAdjust="spacing" fill="#ffffff" font-weight="700">3 addresses</text>
-<text x="162.8" y="210" textLength="92.4" lengthAdjust="spacing" fill="#e6edf3">Signing key</text>
-<text x="364.4" y="210" textLength="67.2" lengthAdjust="spacing" fill="#3fb950">imported</text>
-<text x="28.4" y="231" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">DEVICES</text>
-<text x="162.8" y="231" textLength="75.6" lengthAdjust="spacing" fill="#e6edf3">Bluetooth</text>
-<text x="364.4" y="231" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
-<text x="389.6" y="231" textLength="58.8" lengthAdjust="spacing" fill="#8b949e">· ready</text>
-<text x="162.8" y="252" textLength="100.8" lengthAdjust="spacing" fill="#e6edf3">Serial ports</text>
-<text x="364.4" y="252" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
-<text x="162.8" y="273" textLength="117.6" lengthAdjust="spacing" fill="#e6edf3">Bluetooth scan</text>
-<text x="364.4" y="273" textLength="252.0" lengthAdjust="spacing" fill="#8b949e">listens 15 s for SALTO devices</text>
-<text x="28.4" y="294" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">SERVICE</text>
-<text x="162.8" y="294" textLength="33.6" lengthAdjust="spacing" fill="#e6edf3">Stop</text>
-<text x="162.8" y="315" textLength="58.8" lengthAdjust="spacing" fill="#e6edf3">Restart</text>
-<text x="162.8" y="336" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">Live log</text>
-<text x="364.4" y="336" textLength="210.0" lengthAdjust="spacing" fill="#8b949e">which page asked for what</text>
-<text x="28.4" y="357" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">UPDATES</text>
-<text x="162.8" y="357" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Update now</text>
-<text x="364.4" y="357" textLength="193.2" lengthAdjust="spacing" fill="#8b949e">looks for a new release</text>
-<text x="162.8" y="378" textLength="142.8" lengthAdjust="spacing" fill="#e6edf3">Automatic updates</text>
-<text x="364.4" y="378" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
-<text x="28.4" y="399" textLength="92.4" lengthAdjust="spacing" fill="#58a6ff">MAINTENANCE</text>
-<text x="162.8" y="399" textLength="50.4" lengthAdjust="spacing" fill="#e6edf3">Doctor</text>
-<text x="364.4" y="399" textLength="285.6" lengthAdjust="spacing" fill="#8b949e">finds what is wrong and repairs it</text>
-<text x="162.8" y="420" textLength="109.2" lengthAdjust="spacing" fill="#e6edf3">Set up again…</text>
-<text x="364.4" y="420" textLength="361.2" lengthAdjust="spacing" fill="#8b949e">your SPACE, who may use the bridge, devices</text>
-<text x="162.8" y="441" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Uninstall…</text>
-<text x="41.0" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">↑</text>
-<text x="49.4" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">↓</text>
-<text x="62.0" y="483" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">move</text>
-<text x="125.0" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">⏎</text>
-<text x="141.8" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">→</text>
-<text x="154.4" y="483" textLength="50.4" lengthAdjust="spacing" fill="#8b949e">select</text>
-<text x="230.0" y="483" textLength="25.2" lengthAdjust="spacing" fill="#e6edf3" font-weight="700">esc</text>
-<text x="263.6" y="483" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">quit</text>
+<path d="M32.6 132 V153 M32.6 142.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 142.5 H45.2" stroke="#6e7681"/>
+<text x="53.6" y="147" textLength="50.4" lengthAdjust="spacing" fill="#58a6ff">Access</text>
+<path d="M112.4 142.5 H742.4" stroke="#6e7681"/>
+<path d="M746.6 132 V153 M746.6 142.5 H742.4" stroke="#6e7681" fill="none"/>
+<rect x="45.2" y="153" width="688.8" height="21" rx="4" fill="#1f6feb"/>
+<path d="M32.6 153 V174" stroke="#6e7681" fill="none"/>
+<text x="57.8" y="168" text-anchor="middle" fill="#ffffff" font-weight="700">❯</text>
+<text x="70.4" y="168" textLength="142.8" lengthAdjust="spacing" fill="#ffffff" font-weight="700">Allowed addresses</text>
+<text x="272.0" y="168" textLength="92.4" lengthAdjust="spacing" fill="#ffffff" font-weight="700">3 addresses</text>
+<path d="M746.6 153 V174" stroke="#6e7681" fill="none"/>
+<path d="M32.6 174 V195" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="189" textLength="92.4" lengthAdjust="spacing" fill="#e6edf3">Signing key</text>
+<text x="272.0" y="189" textLength="67.2" lengthAdjust="spacing" fill="#3fb950">imported</text>
+<path d="M746.6 174 V195" stroke="#6e7681" fill="none"/>
+<path d="M32.6 195 V216 M32.6 205.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 205.5 H45.2" stroke="#6e7681"/>
+<text x="53.6" y="210" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">Devices</text>
+<path d="M120.8 205.5 H742.4" stroke="#6e7681"/>
+<path d="M746.6 195 V216 M746.6 205.5 H742.4" stroke="#6e7681" fill="none"/>
+<path d="M32.6 216 V237" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="231" textLength="75.6" lengthAdjust="spacing" fill="#e6edf3">Bluetooth</text>
+<text x="272.0" y="231" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
+<text x="297.2" y="231" textLength="58.8" lengthAdjust="spacing" fill="#8b949e">· ready</text>
+<path d="M746.6 216 V237" stroke="#6e7681" fill="none"/>
+<path d="M32.6 237 V258" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="252" textLength="100.8" lengthAdjust="spacing" fill="#e6edf3">Serial ports</text>
+<text x="272.0" y="252" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
+<path d="M746.6 237 V258" stroke="#6e7681" fill="none"/>
+<path d="M32.6 258 V279" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="273" textLength="117.6" lengthAdjust="spacing" fill="#e6edf3">Bluetooth scan</text>
+<text x="272.0" y="273" textLength="252.0" lengthAdjust="spacing" fill="#8b949e">listens 15 s for SALTO devices</text>
+<path d="M746.6 258 V279" stroke="#6e7681" fill="none"/>
+<path d="M32.6 279 V300 M32.6 289.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 289.5 H45.2" stroke="#6e7681"/>
+<text x="53.6" y="294" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">Service</text>
+<path d="M120.8 289.5 H742.4" stroke="#6e7681"/>
+<path d="M746.6 279 V300 M746.6 289.5 H742.4" stroke="#6e7681" fill="none"/>
+<path d="M32.6 300 V321" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="315" textLength="33.6" lengthAdjust="spacing" fill="#e6edf3">Stop</text>
+<path d="M746.6 300 V321" stroke="#6e7681" fill="none"/>
+<path d="M32.6 321 V342" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="336" textLength="58.8" lengthAdjust="spacing" fill="#e6edf3">Restart</text>
+<path d="M746.6 321 V342" stroke="#6e7681" fill="none"/>
+<path d="M32.6 342 V363" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="357" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">Live log</text>
+<text x="272.0" y="357" textLength="210.0" lengthAdjust="spacing" fill="#8b949e">which page asked for what</text>
+<path d="M746.6 342 V363" stroke="#6e7681" fill="none"/>
+<path d="M32.6 363 V384 M32.6 373.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 373.5 H45.2" stroke="#6e7681"/>
+<text x="53.6" y="378" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">Updates</text>
+<path d="M120.8 373.5 H742.4" stroke="#6e7681"/>
+<path d="M746.6 363 V384 M746.6 373.5 H742.4" stroke="#6e7681" fill="none"/>
+<path d="M32.6 384 V405" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="399" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Update now</text>
+<text x="272.0" y="399" textLength="193.2" lengthAdjust="spacing" fill="#8b949e">looks for a new release</text>
+<path d="M746.6 384 V405" stroke="#6e7681" fill="none"/>
+<path d="M32.6 405 V426" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="420" textLength="142.8" lengthAdjust="spacing" fill="#e6edf3">Automatic updates</text>
+<text x="272.0" y="420" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
+<path d="M746.6 405 V426" stroke="#6e7681" fill="none"/>
+<path d="M32.6 426 V447 M32.6 436.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 436.5 H45.2" stroke="#6e7681"/>
+<text x="53.6" y="441" textLength="92.4" lengthAdjust="spacing" fill="#58a6ff">Maintenance</text>
+<path d="M154.4 436.5 H742.4" stroke="#6e7681"/>
+<path d="M746.6 426 V447 M746.6 436.5 H742.4" stroke="#6e7681" fill="none"/>
+<path d="M32.6 447 V468" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="462" textLength="50.4" lengthAdjust="spacing" fill="#e6edf3">Doctor</text>
+<text x="272.0" y="462" textLength="285.6" lengthAdjust="spacing" fill="#8b949e">finds what is wrong and repairs it</text>
+<path d="M746.6 447 V468" stroke="#6e7681" fill="none"/>
+<path d="M32.6 468 V489" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="483" textLength="109.2" lengthAdjust="spacing" fill="#e6edf3">Set up again…</text>
+<text x="272.0" y="483" textLength="361.2" lengthAdjust="spacing" fill="#8b949e">your SPACE, who may use the bridge, devices</text>
+<path d="M746.6 468 V489" stroke="#6e7681" fill="none"/>
+<path d="M32.6 489 V510" stroke="#6e7681" fill="none"/>
+<text x="70.4" y="504" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Uninstall…</text>
+<path d="M746.6 489 V510" stroke="#6e7681" fill="none"/>
+<path d="M32.6 510 V515.5 Q32.6 520.5 37.6 520.5 H36.8" stroke="#6e7681" fill="none"/>
+<path d="M36.8 520.5 H742.4" stroke="#6e7681"/>
+<path d="M742.4 520.5 H741.6 Q746.6 520.5 746.6 515.5 V510" stroke="#6e7681" fill="none"/>
+<text x="41.0" y="546" text-anchor="middle" fill="#e6edf3" font-weight="700">↑</text>
+<text x="49.4" y="546" text-anchor="middle" fill="#e6edf3" font-weight="700">↓</text>
+<text x="62.0" y="546" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">move</text>
+<text x="125.0" y="546" text-anchor="middle" fill="#e6edf3" font-weight="700">⏎</text>
+<text x="141.8" y="546" text-anchor="middle" fill="#e6edf3" font-weight="700">→</text>
+<text x="154.4" y="546" textLength="50.4" lengthAdjust="spacing" fill="#8b949e">select</text>
+<text x="230.0" y="546" textLength="25.2" lengthAdjust="spacing" fill="#e6edf3" font-weight="700">esc</text>
+<text x="263.6" y="546" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">quit</text>
 </g></svg>
