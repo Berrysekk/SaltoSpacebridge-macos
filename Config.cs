@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SaltoBridge;
 
@@ -18,6 +19,8 @@ public static class Paths
     public static readonly string KeyFile = Path.Combine(Folder, "sign.key");
     public static readonly string StateFile = Path.Combine(Folder, "state.json");
     public static readonly string CertificateFile = Path.Combine(Folder, "localhost.crt");
+    public static readonly string AuthorityFile = Path.Combine(Folder, "authority.crt");
+    public static readonly string PreviousCertificateFile = Path.Combine(Folder, "localhost.previous.crt");
     public static readonly string Log = Path.Combine(home, "Library/Logs/Spacebridge.log");
     public static readonly string Plist = Path.Combine(home, $"Library/LaunchAgents/{Label}.plist");
 
@@ -37,24 +40,43 @@ public sealed class Config
     public bool Bluetooth { get; set; }
     public bool Serial { get; set; } = true;
 
-    static readonly JsonSerializerOptions json = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    /// <summary>Whether the service fetches and installs new releases on its own.</summary>
+    public bool AutoUpdate { get; set; } = true;
 
+    /// <summary>A settings file that cannot be read is set aside and the defaults take over: the bridge must come up either way.</summary>
     public static Config Load()
     {
+        var config = new Config();
+        if (!File.Exists(Paths.ConfigFile)) return config;
         try
         {
-            return File.Exists(Paths.ConfigFile) ? JsonSerializer.Deserialize<Config>(File.ReadAllText(Paths.ConfigFile), json) ?? new() : new();
+            var saved = JsonNode.Parse(File.ReadAllText(Paths.ConfigFile))!.AsObject();
+            if (saved["origins"] is JsonArray origins) config.Origins = [.. origins.Select(o => o!.GetValue<string>())];
+            config.Bluetooth = saved["bluetooth"]?.GetValue<bool>() ?? config.Bluetooth;
+            config.Serial = saved["serial"]?.GetValue<bool>() ?? config.Serial;
+            config.AutoUpdate = saved["autoUpdate"]?.GetValue<bool>() ?? config.AutoUpdate;
         }
-        catch (JsonException e)
+        catch (Exception e) when (e is JsonException or InvalidOperationException or NullReferenceException or FormatException)
         {
-            throw new InvalidOperationException($"{Paths.Short(Paths.ConfigFile)} is not valid: {e.Message}");
+            var aside = Paths.ConfigFile + ".unreadable";
+            File.Move(Paths.ConfigFile, aside, true);
+            Console.Error.WriteLine($"Settings could not be read ({e.Message}); they are set aside as {Paths.Short(aside)} and the defaults apply.");
+            config = new Config();
         }
+        return config;
     }
 
     public void Save()
     {
         Directory.CreateDirectory(Paths.Folder);
-        File.WriteAllText(Paths.ConfigFile, JsonSerializer.Serialize(this, json) + "\n");
+        var saved = new JsonObject
+        {
+            ["origins"] = new JsonArray([.. Origins.Select(o => (JsonNode)o)]),
+            ["bluetooth"] = Bluetooth,
+            ["serial"] = Serial,
+            ["autoUpdate"] = AutoUpdate,
+        };
+        File.WriteAllText(Paths.ConfigFile, saved.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
     }
 
     public bool Allows(string? origin) => origin is null || Origins.Count == 0 || Origins.Contains(origin, StringComparer.OrdinalIgnoreCase);
@@ -105,22 +127,24 @@ public static class SignKey
                 }
                 catch (OperationCanceledException)
                 {
-                    throw new IOException($"No answer from {url} (http instead of https, or the other way round?)");
+                    var other = url.StartsWith("https") ? "http" + Config.Origin(source)[5..] : "https" + Config.Origin(source)[4..];
+                    throw new Failure($"No answer from {Config.Origin(source)}. Is it http instead of https, or the other way round?", $"spacebridge key import {other}");
                 }
                 catch (HttpRequestException e)
                 {
                     // An address copied from the README (your-space) ends here, as a name nobody knows.
-                    throw new IOException($"Cannot reach {Config.Origin(source)}: {e.Message}. Give the address of your own SPACE, the one you open in the browser.");
+                    throw new Failure($"{Config.Origin(source)} cannot be reached ({e.Message}). Give the address of your own SPACE, the one you open in the browser.", "spacebridge key import https://space.example:8100");
                 }
                 using (response)
                 {
-                    response.EnsureSuccessStatusCode();
+                    if (!response.IsSuccessStatusCode) throw new Failure($"{Config.Origin(source)} answered {(int)response.StatusCode} instead of SALTO's bridge installer: is that a ProAccess SPACE? "
+                        + "The installer downloaded from SPACE works as well.", "spacebridge key import ~/Downloads/Setup_SaltoLocalIOBridge.exe");
                     installer = Path.Combine(work, "setup.exe");
                     await File.WriteAllBytesAsync(installer, await response.Content.ReadAsByteArrayAsync());
                 }
             }
-            var key = Search(installer, work, 0) ?? throw new InvalidOperationException(
-                "No known signing key in that installer. This version knows the key of the Windows bridges 1.5.0 and 2.1.0.");
+            var key = Search(installer, work, 0) ?? throw new Failure(
+                "There is no signing key this version knows in that installer; it knows the key of the Windows bridges 1.5.0 and 2.1.0.", "spacebridge update");
             Directory.CreateDirectory(Paths.Folder);
             File.WriteAllText(Paths.KeyFile, key);
             File.SetUnixFileMode(Paths.KeyFile, UnixFileMode.UserRead | UnixFileMode.UserWrite);

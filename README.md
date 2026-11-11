@@ -8,7 +8,7 @@
 <p align="center">
   <img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-0d1117?logo=apple&logoColor=white">
   <img alt="Apple silicon" src="https://img.shields.io/badge/Apple%20silicon-arm64-0d1117">
-  <img alt="Version 1.1.0" src="https://img.shields.io/badge/version-1.1.0-3fb950">
+  <img alt="Version 2.0.0" src="https://img.shields.io/badge/version-2.0.0-3fb950">
 </p>
 
 <p align="center">
@@ -63,7 +63,9 @@ The same as commands, for scripts:
 | `spacebridge status` | What is running, what is allowed, which devices are attached |
 | `spacebridge setup [address]` | Guided setup, or without questions when you give the address |
 | `spacebridge allow <address>` · `deny <address>` | Change who may use the bridge |
-| `spacebridge config bluetooth on` | Switch a setting (`bluetooth`, `serial`) |
+| `spacebridge config bluetooth on` | Switch a setting (`bluetooth`, `serial`, `autoupdate`) |
+| `spacebridge doctor` | Finds what keeps the bridge from working and repairs it |
+| `spacebridge update` | Installs the latest release now |
 | `spacebridge logs -f` | Which page asked for what, live |
 | `spacebridge start` · `stop` · `restart` | The background service |
 | `spacebridge help` | All commands |
@@ -71,6 +73,12 @@ The same as commands, for scripts:
 ## Who may use the bridge
 
 SALTO's bridge answers any web page that asks, so a page you happen to visit could reach your encoder. Spacebridge answers only the addresses on its list, and a connection can only lead back to the page's own server. A page that was refused shows up in the menu, where one keypress lets it in.
+
+## It looks after itself
+
+- **Updates.** The service looks for a new release every few hours and installs it while no device is in use. `spacebridge config autoupdate off` switches that off. With Homebrew, `brew upgrade spacebridge && spacebridge install` updates it.
+- **Certificate.** The certificate for `https://localhost` renews itself. macOS asks for your password once, at the first install, never again.
+- **Repairs.** `spacebridge doctor` checks the app, the service, the certificate and the command, repairs what it can, and prints the command for the rest.
 
 ## Devices
 
@@ -85,17 +93,19 @@ SALTO's bridge answers any web page that asks, so a page you happen to visit cou
 
 | Problem | Fix |
 |---|---|
+| Anything that does not work | `spacebridge doctor` |
 | SPACE cannot connect to the Local IO Bridge | Open the live log. Nothing from your SPACE there? Allow the SPACE site to reach devices on this computer in the browser's site settings. |
 | "refused" in the menu or the log | The page is not on the list: menu → Allowed addresses |
 | Signing key missing | Menu → Signing key |
-| Still the old version after an upgrade | Menu → Install or update |
-| macOS asks about Bluetooth again | Expected: it asks once per installed version |
+| macOS asks about Bluetooth again | Expected: it asks once per installed version, so also after an update |
 
 ## Uninstall
 
 ```sh
-spacebridge uninstall --all
+spacebridge uninstall
 ```
+
+asks what to remove: the service only, or everything. Scripts use `spacebridge uninstall --all`.
 
 ## Build from source
 

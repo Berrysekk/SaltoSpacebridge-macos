@@ -14,6 +14,12 @@ public sealed class Pipe
 
     static readonly Dictionary<string, Pipe> pipes = [];
 
+    /// <summary>Whether SPACE is talking to a device right now.</summary>
+    public static bool Any
+    {
+        get { lock (pipes) return pipes.Values.Any(p => p.open); }
+    }
+
     public static bool IsOpen(string id)
     {
         lock (pipes) return pipes.TryGetValue(id, out var p) && p.open;

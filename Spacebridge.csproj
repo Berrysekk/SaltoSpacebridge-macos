@@ -7,16 +7,22 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>spacebridge</AssemblyName>
     <RootNamespace>SaltoBridge</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>2.0.0</Version>
     <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <!-- Not compressed: a compressed bundle crashed in the runtime at the first socket event, about once in 15 starts (macOS 27). -->
+    <!-- Compiled ahead of time to one native program: no runtime to carry or warm up, a sixth of the size on disk. -->
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StackTraceSupport>false</StackTraceSupport>
+    <IsAotCompatible>true</IsAotCompatible>
     <DebugType>none</DebugType>
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The current servicing release, not the 9.0.6 the SDK carries (GHSA-p3jp-9v83-76w9). -->
+    <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="9.0.23" />
+    <FrameworkReference Update="Microsoft.AspNetCore.App" RuntimeFrameworkVersion="9.0.23" />
+    <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="9.0.23" />
     <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
       <_Parameter1>macos</_Parameter1>
     </AssemblyAttribute>

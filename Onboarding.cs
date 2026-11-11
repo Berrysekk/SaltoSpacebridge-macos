@@ -74,7 +74,7 @@ public static partial class Cli
                         $"{"Serial ports",-14}{(serial ? "on" : "off")}",
                         $"{"Bluetooth",-14}{(bluetooth ? "on" : "off")}",
                         "",
-                        .. Para("The background service starts now and at every login. macOS asks for your password once, to trust the bridge's own certificate for https://localhost."
+                        .. Para("The background service starts now and at every login. macOS asks for your password once, to trust the bridge's own certificate for https://localhost; it renews itself after that."
                             + (bluetooth ? " It also asks once whether Spacebridge may use Bluetooth." : "")),
                     ], [("Install", ""), ("Back", "")]);
                     if (answer != 0)
@@ -131,7 +131,7 @@ public static partial class Cli
             {
                 var way = Choose("No signing key", Step(1),
                 [
-                    .. Para(Red("✗ ") + e.Message),
+                    .. Report(e).Split('\n').SelectMany(Para),
                     "",
                     .. Para("The key is read out of SALTO's bridge installer, which every SPACE serves. Check the address, "
                         + "or use the installer downloaded from SPACE (Setup_SaltoLocalIOBridge.exe)."),

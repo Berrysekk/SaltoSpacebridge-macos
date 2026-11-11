@@ -1,10 +1,12 @@
 // The bridge itself: the REST service SPACE's web app looks for on localhost
 // (GET /info, GET /ports, POST and DELETE /ports/<id>/pipe), answering as the Windows bridge 2.1.0 does.
+using System.Formats.Asn1;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SaltoBridge;
 
@@ -13,7 +15,6 @@ public static class Server
     /// <summary>The version of SALTO's bridge this one stands in for; SPACE shows it.</summary>
     public const string BridgeVersion = "2.1.0.0";
 
-    static readonly JsonSerializerOptions json = new() { PropertyNamingPolicy = null };
     static Config config = new();
 
     public static int Run()
@@ -26,9 +27,11 @@ public static class Server
             Log.Info("No free port in the bridge's ranges (50000-50999).");
             return 1;
         }
-        var certificate = Certificate.LoadOrCreate();
+        var certificate = Certificate.Renew();
 
-        var builder = WebApplication.CreateBuilder();
+        // The slim builder and plain request delegates: nothing here needs reflection, so the program compiles to native code.
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.WebHost.UseKestrelHttpsConfiguration();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         // A browser that does not trust the https certificate drops the connection before any request: only this shows it.
         builder.Logging.AddSimpleConsole(console => console.SingleLine = true).AddFilter("Microsoft.AspNetCore.Server.Kestrel.Https", LogLevel.Debug);
@@ -39,7 +42,8 @@ public static class Server
             foreach (var loopback in new[] { IPAddress.Loopback, IPAddress.IPv6Loopback })
             {
                 kestrel.Listen(loopback, ports[0]);
-                if (certificate is not null) kestrel.Listen(loopback, ports[1], listen => listen.UseHttps(certificate));
+                // Asked for at every connection: a renewed certificate is served without a restart.
+                if (certificate is not null) kestrel.Listen(loopback, ports[1], listen => listen.UseHttps(https => https.ServerCertificateSelector = (_, _) => Certificate.Current));
             }
         });
         var app = builder.Build();
@@ -53,7 +57,7 @@ public static class Server
                 // No CORS headers: the page cannot even read this answer.
                 Log.Info($"refused origin {Clean(origin!)}: `spacebridge allow {Clean(origin!)}` lets it in");
                 context.Response.StatusCode = 403;
-                await context.Response.WriteAsJsonAsync(new { error = "External access forbidden", code = 20 }, json);
+                await Send(context, new JsonObject { ["error"] = "External access forbidden", ["code"] = 20 });
                 return;
             }
             headers.AccessControlAllowOrigin = origin ?? "*";
@@ -73,7 +77,7 @@ public static class Server
                 var error = e as RestError ?? new RestError(500, 10, e.Message);
                 if (error.Status == 500) Log.Info($"{context.Request.Method} {context.Request.Path}: {e.Message}");
                 context.Response.StatusCode = error.Status;
-                await context.Response.WriteAsJsonAsync(new { error = error.Message, code = error.Code }, json);
+                await Send(context, new JsonObject { ["error"] = error.Message, ["code"] = error.Code });
             }
             // Which page asked for what: the only trace of a browser that found the bridge but could not use it.
             // Without an Origin, /info is the spacebridge command looking whether the service answers: not worth a line each time.
@@ -81,31 +85,35 @@ public static class Server
                 Log.Info($"{context.Request.Scheme} {context.Request.Method} {Clean(context.Request.Path)} -> {context.Response.StatusCode} from {Clean(origin ?? "-")}");
         });
 
-        app.MapGet("/info", () =>
+        app.MapGet("/info", context =>
         {
             var bluetooth = config.Bluetooth ? Ble.State() : Ble.Unsupported;
-            return Results.Json(new
+            return Send(context, new JsonObject
             {
-                version = BridgeVersion,
-                timezone = WindowsTimeZone.Serialized.Value,
-                machinename = Environment.MachineName,
-                hasBluetoothAdapter = bluetooth is not (Ble.Unsupported or Ble.Unknown),
-                isBluetoothEnabled = bluetooth == Ble.PoweredOn,
-                isBLESupported = bluetooth is not (Ble.Unsupported or Ble.Unknown),
-            }, json);
+                ["version"] = BridgeVersion,
+                ["timezone"] = WindowsTimeZone.Serialized.Value,
+                ["machinename"] = Environment.MachineName,
+                ["hasBluetoothAdapter"] = bluetooth is not (Ble.Unsupported or Ble.Unknown),
+                ["isBluetoothEnabled"] = bluetooth == Ble.PoweredOn,
+                ["isBLESupported"] = bluetooth is not (Ble.Unsupported or Ble.Unknown),
+            });
         });
 
         // type: 0 USB, 1 serial, 2 Bluetooth. As on Windows, Bluetooth devices are only looked for when asked for (a 15 s scan).
-        app.MapGet("/ports", (int? type, int? device_type) => Results.Json(
-            (type == 2 ? Bluetooth(null) : Discovery.All(config.Serial))
-                .Where(p => type is null or < 0 || p.Type == type)
-                .Where(p => device_type is null or < 0 || p.DeviceType == device_type)
-                .Select(Data), json));
-
-        app.MapGet("/ports/{id}", (string id, int? type) => Results.Json(Data(Find(id, type)), json));
-
-        app.MapPost("/ports/{id}/pipe", async (string id, int? type, HttpRequest request) =>
+        app.MapGet("/ports", context =>
         {
+            int? type = Number(context, "type"), deviceType = Number(context, "device_type");
+            return Send(context, new JsonArray((type == 2 ? Bluetooth(null) : Discovery.All(config.Serial))
+                .Where(p => type is null or < 0 || p.Type == type)
+                .Where(p => deviceType is null or < 0 || p.DeviceType == deviceType)
+                .Select(Data).ToArray()));
+        });
+
+        app.MapGet("/ports/{id}", context => Send(context, Data(Find(Id(context), Number(context, "type")))));
+
+        app.MapPost("/ports/{id}/pipe", async context =>
+        {
+            var request = context.Request;
             var body = await Body(request);
             var token = Text(body, "token") ?? throw new RestError(400, 50, "The following parameter is missing: token");
             var server = Text(body, "server") ?? throw new RestError(400, 50, "The following parameter is missing: server");
@@ -116,25 +124,25 @@ public static class Server
             if (config.Origins.Count > 0 && request.Headers.Origin.FirstOrDefault() is { } origin
                 && !(Uri.TryCreate(server, UriKind.Absolute, out var target) && target.Host.Equals(new Uri(origin).Host, StringComparison.OrdinalIgnoreCase)))
                 throw new RestError(403, 20, "The pipe's server is not the page's server");
-            var port = Find(id, type);
+            var port = Find(Id(context), Number(context, "type"));
             await Pipe.Create(port, server, token, timeout, forceTrusted);
-            return Results.Json(Data(port), json);
+            await Send(context, Data(port));
         });
 
-        app.MapDelete("/ports/{id}/pipe", async (string id, int? type, HttpRequest request) =>
+        app.MapDelete("/ports/{id}/pipe", async context =>
         {
-            var token = Text(await Body(request), "token") ?? throw new RestError(400, 50, "The following parameter is missing: token");
+            var token = Text(await Body(context.Request), "token") ?? throw new RestError(400, 50, "The following parameter is missing: token");
             // A Bluetooth pipe is addressed by the device id; closing must not wait for the device to advertise again.
-            var port = type == 2 ? BluetoothPort(id, "") : Find(id, type);
+            var port = Number(context, "type") == 2 ? BluetoothPort(Id(context), "") : Find(Id(context), Number(context, "type"));
             Pipe.Delete(port.Id, token);
-            return Results.Json(Data(port), json);
+            await Send(context, Data(port));
         });
 
-        app.MapFallback(() => { throw new RestError(404, 21, "Endpoint not found"); });
+        app.MapFallback(_ => throw new RestError(404, 21, "Endpoint not found"));
 
         app.Lifetime.ApplicationStopping.Register(Pipe.CloseAll);
         Directory.CreateDirectory(Paths.Folder);
-        File.WriteAllText(Paths.StateFile, JsonSerializer.Serialize(new { pid = Environment.ProcessId, http = ports[0], https = certificate is null ? 0 : ports[1], version = Cli.Version }));
+        File.WriteAllText(Paths.StateFile, new JsonObject { ["pid"] = Environment.ProcessId, ["http"] = ports[0], ["https"] = certificate is null ? 0 : ports[1], ["version"] = Cli.Version }.ToJsonString());
         Log.Info($"Spacebridge {Cli.Version}: http://localhost:{ports[0]}" + (certificate is null ? "" : $", https://localhost:{ports[1]}")
             + (config.Origins.Count == 0 ? ", any website" : ", only " + string.Join(" ", config.Origins)) + (SignKey.Present ? "" : ", NO SIGNING KEY"));
         // Asks macOS for the Bluetooth permission now, not in the middle of SPACE's two-second search for the bridge.
@@ -145,6 +153,10 @@ public static class Server
             // Unknown while the question is open; say what came of it.
             if (state == Ble.Unknown) Log.Info("Bluetooth: " + Ble.StateName(Ble.State(600_000)));
         });
+        // The certificate lasts 90 days and is replaced with 30 to go; a Mac that slept through that gets a new one on waking.
+        using var renewal = new Timer(_ => Certificate.Renew(), null, TimeSpan.FromHours(12), TimeSpan.FromHours(12));
+        // A new release installs itself; the first look waits until the bridge has settled.
+        using var updates = new Timer(_ => Update.Automatic(config.AutoUpdate), null, TimeSpan.FromMinutes(2), TimeSpan.FromHours(6));
         app.Run();
         return 0;
     }
@@ -178,7 +190,17 @@ public static class Server
     static Port Find(string id, int? type) =>
         (type == 2 ? Bluetooth(id).FirstOrDefault() : Discovery.All(config.Serial).FirstOrDefault(p => p.Id == id)) ?? throw new RestError(404, 30, "Selected port could not be found");
 
-    static object Data(Port p) => new { id = p.Id, type = p.Type, device_type = p.DeviceType, name = p.Name, info = p.Info, pipe = Pipe.IsOpen(p.Id) };
+    static JsonNode Data(Port p) => new JsonObject { ["id"] = p.Id, ["type"] = p.Type, ["device_type"] = p.DeviceType, ["name"] = p.Name, ["info"] = p.Info, ["pipe"] = Pipe.IsOpen(p.Id) };
+
+    static Task Send(HttpContext context, JsonNode body)
+    {
+        context.Response.ContentType = "application/json; charset=utf-8";
+        return context.Response.WriteAsync(body.ToJsonString());
+    }
+
+    static string Id(HttpContext context) => (string)context.Request.RouteValues["id"]!;
+
+    static int? Number(HttpContext context, string name) => int.TryParse(context.Request.Query[name], out var value) ? value : null;
 
     static async Task<JsonElement> Body(HttpRequest request)
     {
@@ -219,41 +241,115 @@ public static class Log
     }
 }
 
+/// <summary>https://localhost without a password every time the certificate runs out: this Mac gets its own small authority,
+/// trusted once by `spacebridge install`, and the service issues itself short-lived certificates from it.</summary>
 public static class Certificate
 {
-    /// <summary>This Mac's own certificate for https://localhost (`spacebridge install` trusts localhost.crt). Null leaves the bridge on http only.</summary>
-    public static X509Certificate2? LoadOrCreate()
-    {
-        try
-        {
-            var pfx = Path.Combine(Paths.Folder, "localhost.pfx");
-            if (File.Exists(pfx) && X509CertificateLoader.LoadPkcs12FromFile(pfx, null) is { } saved && saved.NotAfter > DateTime.Now) return saved;
+    static readonly string authorityPfx = Path.Combine(Paths.Folder, "authority.pfx");
+    static readonly string leafPfx = Path.Combine(Paths.Folder, "localhost.pfx");
+    static readonly object gate = new();
 
-            using var key = RSA.Create(2048);
-            var request = new CertificateRequest("CN=localhost", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            var names = new SubjectAlternativeNameBuilder();
-            names.AddDnsName("localhost");
+    /// <summary>What the https port presents.</summary>
+    public static X509Certificate2? Current { get; private set; }
+
+    /// <summary>The certificate for https://localhost, issued anew when it has less than 30 days left. Null leaves the bridge on http only.</summary>
+    public static X509Certificate2? Renew(int days = 90)
+    {
+        lock (gate)
+        {
+            try
+            {
+                Directory.CreateDirectory(Paths.Folder);
+                var authority = Authority();
+                if (File.Exists(leafPfx))
+                {
+                    var saved = X509CertificateLoader.LoadPkcs12FromFile(leafPfx, null);
+                    if (saved.NotAfter > DateTime.Now.AddDays(30) && saved.IssuerName.RawData.AsSpan().SequenceEqual(authority.SubjectName.RawData)) return Current ??= saved;
+                    // Versions up to 1.1 trusted a self-signed certificate directly; `spacebridge install` takes that trust back.
+                    if (saved.Subject == saved.Issuer && File.Exists(Paths.CertificateFile)) File.Move(Paths.CertificateFile, Paths.PreviousCertificateFile, true);
+                }
+
+                using var whole = Issue(authority, "localhost", days);
+                Save(leafPfx, whole.Export(X509ContentType.Pfx));
+                File.WriteAllText(Paths.CertificateFile, whole.ExportCertificatePem());
+                Log.Info($"New https certificate, good until {whole.NotAfter:yyyy-MM-dd}.");
+                return Current = X509CertificateLoader.LoadPkcs12FromFile(leafPfx, null);
+            }
+            catch (Exception e)
+            {
+                Log.Info("No https certificate, the bridge answers on http only: " + e.Message);
+                return Current;
+            }
+        }
+    }
+
+    /// <summary>A certificate for a host name (and, for localhost, its addresses), signed by the authority.</summary>
+    public static X509Certificate2 Issue(X509Certificate2 authority, string host, int days)
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest("CN=" + host, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var names = new SubjectAlternativeNameBuilder();
+        names.AddDnsName(host);
+        if (host == "localhost")
+        {
             names.AddIpAddress(IPAddress.Loopback);
             names.AddIpAddress(IPAddress.IPv6Loopback);
-            request.CertificateExtensions.Add(names.Build());
-            request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
-            request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, true));
-            request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension([new Oid("1.3.6.1.5.5.7.3.1")], false));
-            // macOS refuses TLS server certificates valid for more than 825 days.
-            using var created = request.CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(820));
+        }
+        request.CertificateExtensions.Add(names.Build());
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, true));
+        request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension([new Oid("1.3.6.1.5.5.7.3.1")], false));
+        request.CertificateExtensions.Add(X509AuthorityKeyIdentifierExtension.CreateFromCertificate(authority, true, false));
+        var serial = RandomNumberGenerator.GetBytes(16);
+        serial[0] &= 0x7F;
+        using var issued = request.Create(authority, DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddDays(days), serial);
+        return issued.CopyWithPrivateKey(key);
+    }
 
-            Directory.CreateDirectory(Paths.Folder);
-            File.WriteAllBytes(pfx, created.Export(X509ContentType.Pfx));
-            File.SetUnixFileMode(pfx, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-            File.WriteAllText(Paths.CertificateFile, created.ExportCertificatePem());
-            Log.Info("New https certificate; `spacebridge install` trusts it.");
-            return X509CertificateLoader.LoadPkcs12FromFile(pfx, null);
-        }
-        catch (Exception e)
+    /// <summary>This Mac's own authority: it may only vouch for localhost, and only its certificate file ever leaves this folder (into the keychain).</summary>
+    static X509Certificate2 Authority()
+    {
+        if (File.Exists(authorityPfx) && X509CertificateLoader.LoadPkcs12FromFile(authorityPfx, null) is { } saved && saved.NotAfter > DateTime.Now.AddDays(90)) return saved;
+
+        using var created = NewAuthority();
+        Save(authorityPfx, created.Export(X509ContentType.Pfx));
+        File.WriteAllText(Paths.AuthorityFile, created.ExportCertificatePem());
+        Log.Info("New certificate authority for https://localhost; `spacebridge install` trusts it.");
+        return X509CertificateLoader.LoadPkcs12FromFile(authorityPfx, null);
+    }
+
+    public static X509Certificate2 NewAuthority()
+    {
+        using var key = RSA.Create(2048);
+        var request = new CertificateRequest($"CN=Spacebridge localhost authority ({Environment.MachineName})", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, true, 0, true));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.KeyCertSign, true));
+        request.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(request.PublicKey, false));
+        request.CertificateExtensions.Add(LocalhostOnly());
+        return request.CreateSelfSigned(DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now.AddYears(10));
+    }
+
+    /// <summary>Name constraints: whoever got hold of the authority's key still could not pass for any site but localhost.</summary>
+    static X509Extension LocalhostOnly()
+    {
+        var name = new Asn1Tag(TagClass.ContextSpecific, 2);
+        var address = new Asn1Tag(TagClass.ContextSpecific, 7);
+        var writer = new AsnWriter(AsnEncodingRules.DER);
+        using (writer.PushSequence())
+        using (writer.PushSequence(new Asn1Tag(TagClass.ContextSpecific, 0)))
         {
-            Log.Info("HTTPS server not started: " + e.Message);
-            return null;
+            using (writer.PushSequence()) writer.WriteCharacterString(UniversalTagNumber.IA5String, "localhost", name);
+            // An address and its mask: exactly 127.0.0.1 and ::1.
+            using (writer.PushSequence()) writer.WriteOctetString([127, 0, 0, 1, 255, 255, 255, 255], address);
+            using (writer.PushSequence()) writer.WriteOctetString([.. IPAddress.IPv6Loopback.GetAddressBytes(), .. Enumerable.Repeat((byte)255, 16)], address);
         }
+        return new X509Extension("2.5.29.30", writer.Encode(), true);
+    }
+
+    static void Save(string path, byte[] secret)
+    {
+        File.WriteAllBytes(path, secret);
+        File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
     }
 }
 

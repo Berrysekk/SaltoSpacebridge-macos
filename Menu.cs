@@ -80,11 +80,12 @@ public static partial class Cli
                         running ? Quiet("Stop", () => { Silent(Stop); return "Service stopped until the next login."; }, "", "Service")
                             : Quiet("Start", () => { Start(); return "Service started."; }, "", "Service"),
                         Quiet("Restart", () => { Restart(); return "Service restarted."; }, "", "Service"),
-                        Shown("Install or update", () => { Install(); return Task.FromResult(0); }, running && service!.Version != Version
-                            ? Yellow($"the service is {service.Version}, this is {Version}") : Dim("updates the service to this version"), "Service"),
+                        Shown("Update", () => UpdateNow(false), service?.Update is { } update && Update.IsNewer(update, Version)
+                            ? Yellow($"version {update} is available") : Dim("looks for a new release now"), "Service"),
+                        Toggle("Automatic updates", "autoupdate", config.AutoUpdate, null, "Service"),
                         new("Uninstall…", UninstallMenu, "", "Service"),
                         new("Live log", LiveLog, Dim(Paths.Short(Paths.Log)), "Diagnostics"),
-                        Shown("Self-test", SelfTest.Run, Dim("checks the bridge's own workings"), "Diagnostics"),
+                        Shown("Doctor", () => Doctor(true), Dim("finds what is wrong and repairs it"), "Diagnostics"),
                     ]);
                     return items;
                 }, root: true, note: note);
@@ -127,20 +128,20 @@ public static partial class Cli
         [
             new("Cancel", () => Task.FromResult<string?>(null)),
             Farewell("Remove the service", false, Dim("settings and signing key stay")),
-            Farewell("Remove everything", true, Dim("service, certificate, settings, signing key")),
+            Farewell("Remove everything", true, Dim("also settings, signing key and the spacebridge command")),
         ]);
 
     static Item Farewell(string label, bool all, string value) => new(label, () =>
     {
         Working();
-        farewell = Captured(() => Uninstall(all));
+        farewell = Captured(() => Remove(all));
         return Task.FromResult<string?>(null);
     }, value);
 
     /// <summary>The service's log as it grows, until Esc.</summary>
     static Task<string?> LiveLog()
     {
-        if (!File.Exists(Paths.Log)) throw new InvalidOperationException($"No log yet at {Paths.Short(Paths.Log)}.");
+        if (!File.Exists(Paths.Log)) throw new Failure($"There is no log yet at {Paths.Short(Paths.Log)}: the service has not run.", "spacebridge start");
         using var reader = new StreamReader(new FileStream(Paths.Log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
         var lines = new List<string>();
         for (bool all = false, changed = true; ;)
@@ -195,7 +196,7 @@ public static partial class Cli
             var list = items();
             var (title, right, rows) = head();
             var top = Box(title, right, rows);
-            if (note.Length > 0) top.AddRange(["", .. Wrap(note, Wide() - 2).Select(l => "  " + l)]);
+            if (note.Length > 0) top.AddRange(["", .. note.Split('\n').SelectMany(l => Wrap(l, Wide() - 2)).Select(l => "  " + l)]);
             var picked = Pick(top, list, ref at, root);
             if (picked == Refresh) continue;
             if (picked < 0) break;
@@ -206,7 +207,7 @@ public static partial class Cli
             }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
-                note = Red("✗ ") + e.Message;
+                note = Report(e);
             }
         }
         return "";
@@ -291,7 +292,7 @@ public static partial class Cli
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.WriteLine(Red("✗ ") + e.Message);
+            Console.WriteLine(Report(e));
         }
         Console.Write("\n" + Hints(("⏎ esc ←", done)));
         while (Console.ReadKey(true).Key is not (ConsoleKey.Enter or ConsoleKey.Escape or ConsoleKey.LeftArrow or ConsoleKey.Q)) { }

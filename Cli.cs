@@ -33,8 +33,9 @@ public static partial class Cli
         Set up
           setup                       Guided setup: your SPACE, who may use the bridge, devices, the service
           setup <SPACE address>       The same without questions: SALTO's signing key from that SPACE, allow it, install the service
-          install                     Install or update the background service and trust its https certificate
-          uninstall [--all]           Remove the service (--all: settings and signing key too)
+          install                     Install or repair the background service and trust its https certificate
+          update [--check]            Install the latest release now (--check only looks); it also installs itself
+          uninstall                   Asks what to remove. For scripts: --service, or --all (settings and signing key too)
           key import <address|file>   Take the signing key from a SPACE server or from Setup_SaltoLocalIOBridge.exe
 
         Use
@@ -42,6 +43,7 @@ public static partial class Cli
           devices [--bluetooth]       Encoders, PPDs, nCoders and serial ports; --bluetooth listens 15 s for SALTO devices
           logs [-f] [-n N] [--all]    The service's log: which page asked for what
           start | stop | restart      The background service
+          doctor [--check]            Find what keeps the bridge from working and repair it (--check only reports)
           selftest                    Check the bridge's own workings (and open an attached device)
 
         Settings
@@ -52,6 +54,7 @@ public static partial class Cli
           config                      Show all settings
           config bluetooth on|off     SALTO devices over Bluetooth LE (off by default)
           config serial on|off        Offer the Mac's serial ports to SPACE (on by default)
+          config autoupdate on|off    Install new releases on its own (on by default)
 
           version | help
         """;
@@ -69,7 +72,9 @@ public static partial class Cli
                 case "menu": return await Menu();
                 case "setup": return await Setup(rest);
                 case "install": Install(); return Status();
-                case "uninstall": return Uninstall(rest.Contains("--all"));
+                case "update": return await UpdateNow(rest.Contains("--check"));
+                case "doctor": return await Doctor(!rest.Contains("--check"));
+                case "uninstall": return await Uninstall(rest);
                 case "start": Start(); return Status();
                 case "stop": return Stop();
                 case "restart": Restart(); return Status();
@@ -83,12 +88,12 @@ public static partial class Cli
                 case "selftest": return await SelfTest.Run();
                 case "version" or "--version" or "-v": Console.WriteLine($"spacebridge {Version} (stands in for SALTO Local IO Bridge {Server.BridgeVersion})"); return 0;
                 case "help" or "--help" or "-h": Console.WriteLine(Help); return 0;
-                default: Console.Error.WriteLine($"Unknown command '{args[0]}'.\n\n{Help}"); return 2;
+                default: Console.Error.WriteLine(Report(new Failure($"There is no command '{args[0]}'.", "spacebridge help"))); return 2;
             }
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
-            Console.Error.WriteLine(Red("error: ") + e.Message);
+            Console.Error.WriteLine(Report(e));
             return 1;
         }
     }
@@ -110,7 +115,7 @@ public static partial class Cli
             return code;
         }
         if (source is null && !SignKey.Present)
-            throw new ArgumentException("Give the address of your SPACE, for example: spacebridge setup https://space.example:8100");
+            throw new Failure("Setup needs the address of your SPACE, as you type it in the browser.", "spacebridge setup https://space.example:8100");
         if (source is not null && !SignKey.Present)
         {
             await SignKey.Import(source);
@@ -134,36 +139,27 @@ public static partial class Cli
         path = File.ResolveLinkTarget(path, true)?.FullName ?? path;
         const string inside = "/Contents/MacOS/spacebridge";
         return path.EndsWith(inside) ? path[..^inside.Length]
-            : throw new InvalidOperationException("`install` works from a release (Spacebridge.app). For a development build run ./build.sh and use dist/Spacebridge.app/Contents/MacOS/spacebridge.");
+            : throw new Failure("`install` works from a release (Spacebridge.app), and this is a development build.", "./build.sh && dist/Spacebridge.app/Contents/MacOS/spacebridge install");
     }
 
     static void Install()
     {
         var source = SourceApp();
         Launchctl("bootout", Target);
-        Launchctl("bootout", $"{Domain}/{Paths.OldLabel}");
-        File.Delete(Paths.OldPlist);
+        RetireOld();
         Directory.CreateDirectory(Paths.Folder);
-        if (Directory.Exists(Paths.OldFolder))
-        {
-            // The first version's folder: its certificate is already trusted, so it moves along.
-            foreach (var name in new[] { "localhost.pfx", "localhost.crt" })
-                if (File.Exists(Path.Combine(Paths.OldFolder, name)) && !File.Exists(Path.Combine(Paths.Folder, name)))
-                    File.Move(Path.Combine(Paths.OldFolder, name), Path.Combine(Paths.Folder, name));
-            Directory.Delete(Paths.OldFolder, true);
-        }
         if (!string.Equals(source, Paths.App, StringComparison.Ordinal))
         {
             if (Directory.Exists(Paths.App)) Directory.Delete(Paths.App, true);
             // ditto keeps the code signature intact.
             var copy = Shell.Run("/usr/bin/ditto", [source, Paths.App]);
-            if (copy.Code != 0) throw new IOException("Copying the app failed: " + copy.Output);
-            // Not notarised: a copy that arrived by browser download or AirDrop would be blocked.
-            Shell.Run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Paths.App]);
-            // Homebrew rewrites the libraries' ids on install, which breaks the bundle's seal; macOS ties the Bluetooth permission to it.
-            if (Shell.Run("/usr/bin/codesign", ["--verify", "--deep", "--strict", Paths.App]).Code != 0)
-                Shell.Run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", Paths.App]);
+            if (copy.Code != 0) throw new Failure($"The app could not be copied to {Paths.Short(Paths.App)}: {copy.Output}", $"sudo chown -R \"$(id -un)\" \"{Paths.Folder}\"");
         }
+        // Not notarised: a copy that arrived by browser download or AirDrop would be blocked.
+        Shell.Run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", Paths.App]);
+        // Homebrew rewrites the libraries' ids on install, which breaks the bundle's seal; macOS ties the Bluetooth permission to it.
+        if (Shell.Run("/usr/bin/codesign", ["--verify", "--deep", "--strict", Paths.App]).Code != 0)
+            Shell.Run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", Paths.App]);
 
         Directory.CreateDirectory(Path.GetDirectoryName(Paths.Plist)!);
         Directory.CreateDirectory(Path.GetDirectoryName(Paths.Log)!);
@@ -183,43 +179,127 @@ public static partial class Cli
 
             """);
         var load = Launchctl("bootstrap", Domain, Paths.Plist);
-        if (load.Code != 0) throw new InvalidOperationException("launchd did not take the service: " + load.Output);
+        if (load.Code != 0)
+        {
+            // A service that was switched off in launchd, or is still on its way out: once more.
+            Launchctl("enable", Target);
+            Launchctl("bootout", Target);
+            Thread.Sleep(1000);
+            load = Launchctl("bootstrap", Domain, Paths.Plist);
+        }
+        if (load.Code != 0) throw new Failure("launchd did not take the service: " + load.Output, $"launchctl bootout {Target}; spacebridge install");
 
         // The service writes its certificate on its first start.
         WaitUntilUp();
-        if (!File.Exists(Paths.CertificateFile)) Console.WriteLine(Yellow("No https certificate yet; run `spacebridge install` again."));
-        else if (!CertificateTrusted())
-        {
-            Console.WriteLine("Trusting the bridge's own certificate for https://localhost (macOS asks for your password)...");
-            var trust = Shell.Run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-p", "ssl", "-k", LoginKeychain, Paths.CertificateFile], show: true);
-            if (trust.Code != 0) Console.WriteLine(Yellow("Not trusted: a SPACE on https will not reach the bridge. Run `spacebridge install` again to retry."));
-        }
+        if (Service() is not { Answers: true }) throw new Failure("The service was installed but does not answer.", "spacebridge logs");
+        if (!File.Exists(Paths.AuthorityFile)) Console.WriteLine(Yellow("No https certificate yet; run `spacebridge install` again."));
+        else if (!TrustCertificate()) Console.WriteLine(Yellow("Not trusted: a SPACE on https will not reach the bridge. Run `spacebridge install` again to retry."));
         Console.WriteLine(Green("Installed.") + "\n");
     }
 
-    static int Uninstall(bool all)
+    /// <summary>The first version's service and folder, under their old names.</summary>
+    static void RetireOld()
+    {
+        Launchctl("bootout", $"{Domain}/{Paths.OldLabel}");
+        File.Delete(Paths.OldPlist);
+        if (!Directory.Exists(Paths.OldFolder)) return;
+        Directory.CreateDirectory(Paths.Folder);
+        // Its certificate moves along, so that the trust in it can be taken back.
+        foreach (var name in new[] { "localhost.pfx", "localhost.crt" })
+            if (File.Exists(Path.Combine(Paths.OldFolder, name)) && !File.Exists(Path.Combine(Paths.Folder, name)))
+                File.Move(Path.Combine(Paths.OldFolder, name), Path.Combine(Paths.Folder, name));
+        Directory.Delete(Paths.OldFolder, true);
+    }
+
+    /// <summary>Has macOS trust this Mac's own authority for https://localhost; the certificates it issues need no further asking.</summary>
+    static bool TrustCertificate()
+    {
+        // Versions up to 1.1 had their one certificate trusted directly.
+        if (File.Exists(Paths.PreviousCertificateFile))
+        {
+            Forget(Paths.PreviousCertificateFile);
+            File.Delete(Paths.PreviousCertificateFile);
+        }
+        if (CertificateTrusted()) return true;
+        Console.WriteLine("Trusting the bridge's own certificate for https://localhost (macOS asks for your password)...");
+        return Shell.Run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-p", "ssl", "-k", LoginKeychain, Paths.AuthorityFile], show: true).Code == 0;
+    }
+
+    /// <summary>Takes a certificate out of the keychain.</summary>
+    static void Forget(string file)
+    {
+        using var certificate = X509CertificateLoader.LoadCertificateFromFile(file);
+        Shell.Run("/usr/bin/security", ["delete-certificate", "-Z", certificate.Thumbprint, LoginKeychain]);
+    }
+
+    /// <summary>`uninstall`: in a terminal it asks what to remove; scripts say it with --service or --all.</summary>
+    static async Task<int> Uninstall(string[] args)
+    {
+        if (args.Contains("--all") || args.Contains("--service") || Console.IsInputRedirected || Console.IsOutputRedirected) return Remove(args.Contains("--all"));
+        await FullScreen(UninstallMenu);
+        Console.Write(farewell ?? "Nothing was removed.\n");
+        return 0;
+    }
+
+    static int Remove(bool all)
     {
         Launchctl("bootout", Target);
         File.Delete(Paths.Plist);
-        if (File.Exists(Paths.CertificateFile))
+        foreach (var file in new[] { Paths.AuthorityFile, Paths.CertificateFile, Paths.PreviousCertificateFile }.Where(File.Exists)) Forget(file);
+        if (all)
         {
-            using var certificate = X509CertificateLoader.LoadCertificateFromFile(Paths.CertificateFile);
-            Shell.Run("/usr/bin/security", ["delete-certificate", "-Z", certificate.Thumbprint, LoginKeychain]);
+            // The command the installer linked; one in a folder of root's stays, with the way to remove it.
+            foreach (var link in Commands().Where(p => new FileInfo(p).LinkTarget?.StartsWith(Paths.App) == true))
+            {
+                try
+                {
+                    File.Delete(link);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Console.WriteLine($"The command stays at {link}.\n  {Dim("Fix:")} {Bold($"sudo rm \"{link}\"")}");
+                }
+            }
+            if (Directory.Exists(Paths.Folder)) Directory.Delete(Paths.Folder, true);
         }
-        if (all && Directory.Exists(Paths.Folder)) Directory.Delete(Paths.Folder, true);
         else
         {
             if (Directory.Exists(Paths.App)) Directory.Delete(Paths.App, true);
-            foreach (var name in new[] { "localhost.pfx", "localhost.crt", "state.json" }) File.Delete(Path.Combine(Paths.Folder, name));
+            foreach (var name in new[] { "localhost.pfx", "localhost.crt", "localhost.previous.crt", "authority.pfx", "authority.crt", "state.json" }) File.Delete(Path.Combine(Paths.Folder, name));
         }
-        Console.WriteLine(all ? "Removed the service, its certificate, settings and signing key." : $"Removed the service and its certificate. Settings and signing key stay in {Paths.Short(Paths.Folder)} (--all removes them).");
+        Console.WriteLine(all ? "Removed the service, its certificate, settings, signing key and the spacebridge command."
+            : $"Removed the service and its certificate. Settings and signing key stay in {Paths.Short(Paths.Folder)}.");
+        if (Update.Homebrew) Console.WriteLine($"Homebrew still has its copy.\n  {Dim("Fix:")} {Bold("brew uninstall spacebridge")}");
+        return 0;
+    }
+
+    static async Task<int> UpdateNow(bool check)
+    {
+        if (await Update.Newer() is not { } release)
+        {
+            Console.WriteLine($"{Green("✓")} Spacebridge {Version} is the latest version.");
+            return 0;
+        }
+        if (check)
+        {
+            Console.WriteLine($"Spacebridge {release.Version} is available; this is {Version}.\n  {Dim("Install it:")} {Bold("spacebridge update")}");
+            return 0;
+        }
+        Console.WriteLine($"Updating from {Version} to {release.Version}...");
+        await Update.Install(release);
+        if (Loaded) Restart();
+        Console.WriteLine($"{Green("✓")} Updated to {release.Version}." + (Config.Load().Bluetooth ? " macOS asks once more whether Spacebridge may use Bluetooth." : ""));
         return 0;
     }
 
     static string LoginKeychain => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library/Keychains/login.keychain-db");
 
-    static bool CertificateTrusted() =>
-        File.Exists(Paths.CertificateFile) && Shell.Run("/usr/bin/security", ["verify-cert", "-c", Paths.CertificateFile, "-p", "ssl", "-s", "localhost"]).Code == 0;
+    static bool CertificateTrusted()
+    {
+        if (!File.Exists(Paths.CertificateFile)) return false;
+        using var certificate = X509CertificateLoader.LoadCertificateFromFile(Paths.CertificateFile);
+        return Keychain.Trusts(certificate, "localhost");
+    }
 
     static (int Code, string Output) Launchctl(params string[] arguments) => Shell.Run("/bin/launchctl", arguments);
 
@@ -227,7 +307,7 @@ public static partial class Cli
 
     static void Start()
     {
-        if (!File.Exists(Paths.Plist)) throw new InvalidOperationException("The service is not installed: run `spacebridge install`.");
+        if (!File.Exists(Paths.Plist)) throw new Failure("The service is not installed.", SignKey.Present ? "spacebridge install" : "spacebridge setup");
         if (!Loaded) Launchctl("bootstrap", Domain, Paths.Plist);
         else Launchctl("kickstart", Target);
         WaitUntilUp();
@@ -268,7 +348,7 @@ public static partial class Cli
 
     // ---- status ----
 
-    sealed record ServiceState(int Pid, int Http, int Https, string Version, bool Answers);
+    sealed record ServiceState(int Pid, int Http, int Https, string Version, bool Answers, string? Update);
 
     static ServiceState? Service()
     {
@@ -279,7 +359,8 @@ public static partial class Cli
             var state = JsonDocument.Parse(File.ReadAllText(Paths.StateFile)).RootElement;
             int pid = state.GetProperty("pid").GetInt32(), http = state.GetProperty("http").GetInt32();
             var running = print.Output.Contains($"pid = {pid}");
-            return new(pid, http, state.GetProperty("https").GetInt32(), state.GetProperty("version").GetString() ?? "?", running && Get($"http://localhost:{http}/info", 1500) is not null);
+            return new(pid, http, state.GetProperty("https").GetInt32(), state.GetProperty("version").GetString() ?? "?", running && Get($"http://localhost:{http}/info", 1500) is not null,
+                state.TryGetProperty("update", out var update) ? update.GetString() : null);
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or IOException)
         {
@@ -316,12 +397,10 @@ public static partial class Cli
         else rows.Add(("Service", $"{Dim("○")} not installed{Hint("spacebridge setup")}"));
 
         if (File.Exists(Paths.CertificateFile))
-        {
-            using var certificate = X509CertificateLoader.LoadCertificateFromFile(Paths.CertificateFile);
             rows.Add(("Certificate", CertificateTrusted()
-                ? $"{Green("●")} trusted for https://localhost {Dim($"until {certificate.NotAfter:yyyy-MM-dd}")}"
+                ? $"{Green("●")} trusted for https://localhost {Dim("· renews itself")}"
                 : $"{Red("●")} not trusted: a SPACE on https cannot reach the bridge{Hint("spacebridge install")}"));
-        }
+        if (service?.Update is { } update && SaltoBridge.Update.IsNewer(update, Version)) rows.Add(("Update", $"{Yellow("●")} version {update} is available{Hint("spacebridge update")}"));
         return rows;
     }
 
@@ -378,8 +457,8 @@ public static partial class Cli
         if (!bluetooth) return 0;
 
         // Bluetooth goes through the service: the macOS permission belongs to it, not to this terminal.
-        if (!config.Bluetooth) throw new InvalidOperationException("Bluetooth is off: `spacebridge config bluetooth on`.");
-        var service = Service() ?? throw new InvalidOperationException("The service is not running: `spacebridge start`.");
+        if (!config.Bluetooth) throw new Failure("Bluetooth is off.", "spacebridge config bluetooth on");
+        var service = Service() ?? throw new Failure("The service is not running, and Bluetooth goes through it.", "spacebridge start");
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         var info = JsonDocument.Parse(await http.GetStringAsync($"http://localhost:{service.Http}/info")).RootElement;
         if (!info.GetProperty("isBluetoothEnabled").GetBoolean())
@@ -396,7 +475,7 @@ public static partial class Cli
 
     static int Logs(string[] args)
     {
-        if (!File.Exists(Paths.Log)) throw new InvalidOperationException($"No log yet at {Paths.Short(Paths.Log)}.");
+        if (!File.Exists(Paths.Log)) throw new Failure($"There is no log yet at {Paths.Short(Paths.Log)}: the service has not run.", "spacebridge start");
         var count = Array.IndexOf(args, "-n") is >= 0 and var at && at + 1 < args.Length && int.TryParse(args[at + 1], out var n) ? n : 40;
         bool all = args.Contains("--all"), follow = args.Contains("-f");
         // The web server's own debug lines (every TLS connection) only with --all.
@@ -426,7 +505,7 @@ public static partial class Cli
     {
         var config = Config.Load();
         if (args.Contains("--any")) config.Origins.Clear();
-        else if (args.Length == 0) throw new ArgumentException("Which address? For example: spacebridge allow https://space.example:8100");
+        else if (args.Length == 0) throw new Failure("`allow` needs the address of a SPACE.", "spacebridge allow https://space.example:8100");
         else foreach (var origin in args.Select(Config.Origin)) if (!config.Origins.Contains(origin)) config.Origins.Add(origin);
         config.Save();
         Origins(config);
@@ -436,7 +515,7 @@ public static partial class Cli
 
     static int Deny(string[] args)
     {
-        if (args.Length == 0) throw new ArgumentException("Which address? `spacebridge origins` shows the list.");
+        if (args.Length == 0) throw new Failure("`deny` needs an address from the list.", "spacebridge origins");
         var config = Config.Load();
         foreach (var origin in args.Select(Config.Origin))
             if (!config.Origins.Remove(origin)) Console.WriteLine(Yellow($"{origin} was not on the list."));
@@ -454,10 +533,11 @@ public static partial class Cli
             Row("origins", config.Origins.Count == 0 ? "any website" : string.Join(" ", config.Origins));
             Row("bluetooth", config.Bluetooth ? "on" : "off");
             Row("serial", config.Serial ? "on" : "off");
+            Row("autoupdate", config.AutoUpdate ? "on" : "off");
             Console.WriteLine($"\n  {Dim(Paths.Short(Paths.ConfigFile))}");
             return 0;
         }
-        if (args.Length != 2 || args[1] is not ("on" or "off")) throw new ArgumentException("Usage: spacebridge config bluetooth|serial on|off");
+        if (args.Length != 2 || args[1] is not ("on" or "off")) throw new Failure("A setting is switched on or off.", "spacebridge config bluetooth|serial|autoupdate on|off");
         var on = args[1] == "on";
         switch (args[0])
         {
@@ -467,7 +547,8 @@ public static partial class Cli
                     + Yellow("Ported from SALTO's Windows bridge and not yet tried against a SALTO Bluetooth device."));
                 break;
             case "serial": config.Serial = on; break;
-            default: throw new ArgumentException($"No setting '{args[0]}': bluetooth or serial.");
+            case "autoupdate": config.AutoUpdate = on; break;
+            default: throw new Failure($"There is no setting '{args[0]}'.", "spacebridge config");
         }
         config.Save();
         Apply();
@@ -483,7 +564,7 @@ public static partial class Cli
             Apply();
             return 0;
         }
-        if (args.Length > 0 && args[0] != "status") throw new ArgumentException("Usage: spacebridge key import <SPACE address | Setup_SaltoLocalIOBridge.exe>");
+        if (args.Length > 0 && args[0] != "status") throw new Failure("`key` takes the signing key from a SPACE address or from Setup_SaltoLocalIOBridge.exe.", "spacebridge key import https://space.example:8100");
         Console.WriteLine(SignKey.Present ? $"Signing key present: {Paths.Short(Paths.KeyFile)}" : "No signing key: spacebridge key import <SPACE address>");
         return SignKey.Present ? 0 : 1;
     }

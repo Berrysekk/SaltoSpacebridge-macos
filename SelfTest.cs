@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace SaltoBridge;
@@ -99,6 +100,26 @@ public static class SelfTest
             Check(Config.Origin("HTTPS://Space.Example:8100/ProAccessSpace/") == "https://space.example:8100" && Config.Origin("http://10.0.0.5:8100") == "http://10.0.0.5:8100", "SPACE addresses become origins");
             var listed = new Config { Origins = ["https://space.example:8100"] };
             Check(listed.Allows("https://space.example:8100") && !listed.Allows("https://evil.example") && listed.Allows(null) && new Config().Allows("https://evil.example"), "the allow-list lets in only listed pages");
+
+            // The https certificate: this Mac's authority vouches for localhost and, by its name constraints, for nothing else.
+            using (var authority = Certificate.NewAuthority())
+            using (var localhost = Certificate.Issue(authority, "localhost", 90))
+            using (var other = Certificate.Issue(authority, "example.com", 90))
+            {
+                bool Chains(X509Certificate2 certificate)
+                {
+                    using var chain = new X509Chain();
+                    chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                    chain.ChainPolicy.CustomTrustStore.Add(authority);
+                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                    return chain.Build(certificate);
+                }
+                Check(Chains(localhost) && !Chains(other) && !Keychain.Trusts(other, "example.com"), "https certificate: the authority vouches for localhost only");
+            }
+
+            var release = Update.Parse("""{"tag_name":"v9.1.0","assets":[{"name":"x.zip","browser_download_url":"https://e/x.zip"},{"name":"spacebridge-9.1.0-macos-arm64.tar.gz","browser_download_url":"https://e/a.tar.gz","digest":"sha256:ab"}]}""");
+            Check(release is { Version: "9.1.0", Url: "https://e/a.tar.gz", Sha256: "ab" } && Update.Parse("""{"tag_name":"v1","assets":[]}""") is null
+                && Update.IsNewer("1.10.0", "1.9.9") && !Update.IsNewer("1.2.0", "1.2.0") && !Update.IsNewer("dev", "1.0.0"), "updates: the release's archive and what counts as newer");
 
             // Bluetooth: SALTO's advertisement and its packet framing (a device is needed for the rest).
             Check(Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x80, 1, 2, 3, 4, 5, 6, 0xAB]) == "010203040506AB" && Ble.SaltoDevice([0x99, 0x01, 1, 0, 0x00, 1, 2, 3, 4, 5, 6, 7]) is null
