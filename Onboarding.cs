@@ -173,7 +173,7 @@ public static partial class Cli
         Func<Task<string?>> none = () => Task.FromResult<string?>(null);
         for (var at = 0; ;)
         {
-            var picked = Pick(Box("Devices", Step(3),
+            var picked = Pick(() => Box("Devices", Step(3),
             [
                 .. Para("USB encoders, PPDs and nCoders always work. Serial ports and Bluetooth can be switched here, and later in the menu."),
             ]),
@@ -196,7 +196,7 @@ public static partial class Cli
     static int Choose(string title, string right, List<string> rows, (string Label, string Note)[] answers, int at = 0)
     {
         Func<Task<string?>> none = () => Task.FromResult<string?>(null);
-        return Pick(Box(title, right, rows), [.. answers.Select(a => new Item(a.Label, none, a.Note))], ref at, false);
+        return Pick(() => Box(title, right, rows), [.. answers.Select(a => new Item(a.Label, none, a.Note))], ref at, false);
     }
 
     /// <summary>A paragraph broken into the lines of a frame.</summary>

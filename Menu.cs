@@ -26,6 +26,8 @@ public static partial class Cli
         static void Leave() => Console.Write("\e[?25h\e[?1049l");
         ConsoleCancelEventHandler restore = (_, _) => Leave();
         Console.Write("\e[?1049h\e[?25l");
+        // Room for the main menu and a note under it. A terminal that grows does so within a moment, and the first screen is laid out for it.
+        if (Grow(28)) for (var (was, i) = (Window(), 0); i < 10 && Window() == was; i++) Thread.Sleep(10);
         Console.CancelKeyPress += restore;
         try
         {
@@ -146,8 +148,10 @@ public static partial class Cli
         if (!File.Exists(Paths.Log)) throw new Failure($"There is no log yet at {Paths.Short(Paths.Log)}: the service has not run.", "spacebridge start");
         using var reader = new StreamReader(new FileStream(Paths.Log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
         var lines = new List<string>();
+        var size = Window();
         for (bool all = false, changed = true; ;)
         {
+            if (Window() is var now && now != size) (size, changed) = (now, true);
             while (reader.ReadLine() is { } line)
             {
                 lines.Add(line);
@@ -159,13 +163,13 @@ public static partial class Cli
                 var shown = lines.Where(l => all || !(l.StartsWith("dbug:") || l.StartsWith("fail:") || l.StartsWith("warn:") || l.StartsWith(' ')));
                 var screen = Box("Live log", Paths.Short(Paths.Log), []);
                 screen.RemoveAt(screen.Count - 1);
-                screen.AddRange(shown.TakeLast(Math.Max(5, Console.WindowHeight - 4)).Select(l => " " + Tint(l)));
+                screen.AddRange(shown.TakeLast(Math.Max(5, size.Height - 4)).Select(l => " " + Tint(l)));
                 Draw([.. screen, "", Hints(("a", all ? "requests only" : "all lines"), ("esc ←", "back"))]);
                 changed = false;
             }
             if (!Console.KeyAvailable)
             {
-                Thread.Sleep(120);
+                Thread.Sleep(40);
                 continue;
             }
             switch (Console.ReadKey(true).Key)
@@ -197,7 +201,7 @@ public static partial class Cli
         {
             var list = items();
             var (title, right, rows) = head();
-            var picked = Pick(Box(title, right, rows), list, ref at, root, note);
+            var picked = Pick(() => Box(title, right, rows), list, ref at, root, note);
             if (picked == Refresh) continue;
             if (picked < 0) break;
             try
@@ -213,8 +217,9 @@ public static partial class Cli
         return "";
     }
 
-    /// <summary>Draws the menu and waits for a choice: its index, -1 for Esc, or Refresh when the main screen is due for a fresh look.</summary>
-    static int Pick(List<string> top, List<Item> items, ref int at, bool root, string note = "")
+    /// <summary>Draws the menu and waits for a choice: its index, -1 for Esc, or Refresh when the main screen is due for a fresh look.
+    /// A window that changes size gets the menu drawn again at once.</summary>
+    static int Pick(Func<List<string>> box, List<Item> items, ref int at, bool root, string note = "")
     {
         at = Math.Clamp(at, 0, items.Count - 1);
         var labels = Math.Max(22, items.Max(i => i.Label.Length)) + 2;
@@ -222,6 +227,8 @@ public static partial class Cli
         while (true)
         {
             // The box on top and the items share one frame; every section starts at a rule that carries its name.
+            var size = Window();
+            var top = box();
             var lines = top[..^1];
             var focus = 0;
             for (var i = 0; i < items.Count; i++)
@@ -234,12 +241,14 @@ public static partial class Cli
             }
             lines.Add(top[^1]);
             if (note.Length > 0) lines.AddRange(["", .. note.Split('\n').SelectMany(l => Wrap(l, Wide() - 2)).Select(l => "  " + l), ""]);
-            Draw([.. lines, Hints(("↑↓", "move"), ("⏎ →", "select"), root ? ("esc", "quit") : ("esc ←", "back"))], focus);
-            while (!Console.KeyAvailable)
+            // Without a note, the room one takes stays free under the menu.
+            Draw([.. lines, Hints(("↑↓", "move"), ("⏎ →", "select"), root ? ("esc", "quit") : ("esc ←", "back"))], focus, note.Length > 0 ? 1 : 4);
+            while (!Console.KeyAvailable && Window() == size)
             {
                 if (root && Environment.TickCount64 > due) return Refresh;
-                Thread.Sleep(40);
+                Thread.Sleep(20);
             }
+            if (!Console.KeyAvailable) continue;
             switch (Console.ReadKey(true).Key)
             {
                 case ConsoleKey.UpArrow: at = (at + items.Count - 1) % items.Count; break;
@@ -255,26 +264,35 @@ public static partial class Cli
     /// <summary>A line of text from the user, or null when they press Esc or leave it empty.</summary>
     static string? Ask(string title, string prompt, string initial = "", string right = "")
     {
-        Draw([.. Box(title, right, [.. prompt.Split('\n')]), "", Hints(("⏎", "confirm"), ("esc", "cancel")), "", "  " + Accent("›") + " " + initial]);
         Console.Write("\e[?25h");
         var text = new StringBuilder(initial);
         try
         {
             while (true)
             {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Escape) return null;
-                if (key.Key == ConsoleKey.Enter) return text.ToString().Trim() is { Length: > 0 } answer ? answer : null;
-                if (key.Key == ConsoleKey.Backspace)
+                var size = Window();
+                Draw([.. Box(title, right, [.. prompt.Split('\n')]), "", Hints(("⏎", "confirm"), ("esc", "cancel")), "", "  " + Accent("›") + " " + text]);
+                while (Window() == size)
                 {
-                    if (text.Length == 0) continue;
-                    text.Length--;
-                    Console.Write("\b \b");
-                }
-                else if (!char.IsControl(key.KeyChar))
-                {
-                    text.Append(key.KeyChar);
-                    Console.Write(key.KeyChar);
+                    if (!Console.KeyAvailable)
+                    {
+                        Thread.Sleep(20);
+                        continue;
+                    }
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.Escape) return null;
+                    if (key.Key == ConsoleKey.Enter) return text.ToString().Trim() is { Length: > 0 } answer ? answer : null;
+                    if (key.Key == ConsoleKey.Backspace)
+                    {
+                        if (text.Length == 0) continue;
+                        text.Length--;
+                        Console.Write("\b \b");
+                    }
+                    else if (!char.IsControl(key.KeyChar))
+                    {
+                        text.Append(key.KeyChar);
+                        Console.Write(key.KeyChar);
+                    }
                 }
             }
         }
@@ -336,7 +354,7 @@ public static partial class Cli
     {
         var at = 0;
         Func<Task<string?>> nothing = () => Task.FromResult<string?>("");
-        return Pick(Box(label, "", [question]), [new("No, leave it", nothing), new(yes, nothing)], ref at, false) == 1 ? Now(action) : nothing();
+        return Pick(() => Box(label, "", [question]), [new("No, leave it", nothing), new(yes, nothing)], ref at, false) == 1 ? Now(action) : nothing();
     }, value, section);
 
     static Item Shown(string label, Func<Task<int>> command, string value = "", string section = "") =>
@@ -358,7 +376,25 @@ public static partial class Cli
     static string Plain(string s) => Ansi.Replace(s, "");
 
     /// <summary>The width the screens are laid out for.</summary>
-    static int Wide() => Math.Clamp((Console.WindowWidth > 0 ? Console.WindowWidth : 80) - 2, 40, 86);
+    static int Wide() => Math.Clamp(Window().Width - 2, 40, Widest);
+
+    const int Widest = 86;
+
+    /// <summary>The terminal window, in columns and rows.</summary>
+    static (int Width, int Height) Window() => (Console.WindowWidth > 0 ? Console.WindowWidth : 80, Console.WindowHeight > 0 ? Console.WindowHeight : 24);
+
+    static (int Width, int Height) asked;
+
+    /// <summary>Asks a window too small for a screen to grow, never to shrink. Once per size: a terminal that keeps its own size (tmux, an editor's panel) ignores it.</summary>
+    static bool Grow(int rows)
+    {
+        var window = Window();
+        var (width, height) = (Math.Max(window.Width, Widest + 2), Math.Max(window.Height, rows));
+        if ((width, height) == window || asked == window) return false;
+        asked = window;
+        Console.Write($"\e[8;{height};{width}t");
+        return true;
+    }
 
     /// <summary>Cuts a line, colours and all, to a number of visible characters.</summary>
     static string Fit(string s, int width)
@@ -413,10 +449,11 @@ public static partial class Cli
 
     /// <summary>Paints a whole screen over the last one, without a flash of empty screen in between.
     /// A window with fewer rows than the screen has lines shows the part around the selected one.</summary>
-    static void Draw(List<string> lines, int focus = 0)
+    static void Draw(List<string> lines, int focus = 0, int room = 1)
     {
-        var width = (Console.WindowWidth > 0 ? Console.WindowWidth : 80) - 1;
-        var height = Console.WindowHeight > 0 ? Console.WindowHeight : 24;
+        Grow(lines.Count + room);
+        var (width, height) = Window();
+        width--;
         if (lines.Count > height) lines = lines.GetRange(Math.Clamp(focus - height / 2, 0, lines.Count - height), height);
         Console.Write("\e[H" + string.Join("\e[K\n", lines.Select(l => Fit(l, width))) + "\e[K\e[J");
     }
