@@ -9,7 +9,7 @@
   <img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-0d1117?logo=apple&logoColor=white">
   <img alt="Apple silicon" src="https://img.shields.io/badge/Apple%20silicon-arm64-0d1117">
   <img alt="Bridge protocol 1.5 and 2.1" src="https://img.shields.io/badge/bridge%20protocol-1.5%20%C2%B7%202.1-1f6feb">
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-3fb950">
+  <img alt="Version 1.0.1" src="https://img.shields.io/badge/version-1.0.1-3fb950">
 </p>
 
 <p align="center">
@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/ma
 
 > [!NOTE]
 > While this repository is private, both ways need a GitHub login that can read it. Without one, download `spacebridge-<version>-macos-arm64.tar.gz` from [Releases](../../releases) and run
-> `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.0.0-macos-arm64.tar.gz sh install.sh https://your-space:8100`.
+> `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.0.1-macos-arm64.tar.gz sh install.sh https://your-space:8100`.
 
 `setup` takes the address of your SPACE exactly as you type it in the browser, and does three things:
 
@@ -98,7 +98,7 @@ Everything in the menu is also a command, for scripts and for the impatient.
 
 ```
 $ spacebridge status
-Spacebridge 1.0.0 · SALTO Local IO Bridge 2.1.0.0 for macOS
+Spacebridge 1.0.1 · SALTO Local IO Bridge 2.1.0.0 for macOS
 
   Service      ● running (pid 2437)  http://localhost:50000  https://localhost:50001
   Certificate  ● trusted for https://localhost until 2029-02-08
