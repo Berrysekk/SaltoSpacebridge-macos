@@ -35,13 +35,18 @@ if [ $# -gt 0 ]; then
   "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" setup "$@" || { unfinished=1; "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" install; }
 else "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" install; fi
 
-if [ -n "$bin" ]; then
-  ln -sf "$dir/Spacebridge.app/Contents/MacOS/spacebridge" "$bin/spacebridge"
-  echo "The command is $bin/spacebridge."
-else
-  echo "No writable directory on your PATH. Add this to ~/.zshrc:"
-  echo "  alias spacebridge='\"$dir/Spacebridge.app/Contents/MacOS/spacebridge\"'"
+newpath=""
+if [ -z "$bin" ]; then
+  # A fresh Mac has no such directory: make ~/.local/bin and put it on the PATH of new shells.
+  bin="$HOME/.local/bin"
+  mkdir -p "$bin"
+  case "${SHELL##*/}" in bash) rc="$HOME/.bash_profile" ;; zsh) rc="$HOME/.zshrc" ;; *) rc="$HOME/.profile" ;; esac
+  grep -qs '\.local/bin' "$rc" || printf '\n# Added by the Spacebridge installer\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rc"
+  newpath=$rc
 fi
+ln -sf "$dir/Spacebridge.app/Contents/MacOS/spacebridge" "$bin/spacebridge"
+echo "The command is $bin/spacebridge."
+[ -z "$newpath" ] || echo "Open a new terminal window to use it ($bin was added to your PATH in $newpath)."
 if [ -n "$unfinished" ]; then
   echo "Setup did not finish (see the error above). Repeat it with the address of your own SPACE: spacebridge setup <address>" >&2
   exit 1
