@@ -42,6 +42,8 @@ spacebridge setup https://your-space:8100
 curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://your-space:8100
 ```
 
+`https://your-space:8100` stands for the address of your own SPACE; put that in its place.
+
 > [!NOTE]
 > While this repository is private, both ways need a GitHub login that can read it. Without one, download `spacebridge-<version>-macos-arm64.tar.gz` from [Releases](../../releases) and run
 > `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.0.0-macos-arm64.tar.gz sh install.sh https://your-space:8100`.

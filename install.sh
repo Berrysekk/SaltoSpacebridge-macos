@@ -29,7 +29,10 @@ for candidate in "$HOME/.local/bin" "$HOME/bin" /opt/homebrew/bin /usr/local/bin
 done
 
 # `install` copies the app into place and (re)starts the service; `setup` first fetches SALTO's signing key from the SPACE.
-if [ $# -gt 0 ]; then "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" setup "$@"
+# A setup that fails (a mistyped address) still leaves the app and the command behind, so it can be repeated.
+unfinished=""
+if [ $# -gt 0 ]; then
+  "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" setup "$@" || { unfinished=1; "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" install; }
 else "$tmp/Spacebridge.app/Contents/MacOS/spacebridge" install; fi
 
 if [ -n "$bin" ]; then
@@ -39,4 +42,8 @@ else
   echo "No writable directory on your PATH. Add this to ~/.zshrc:"
   echo "  alias spacebridge='\"$dir/Spacebridge.app/Contents/MacOS/spacebridge\"'"
 fi
-[ $# -gt 0 ] || echo "Next: spacebridge setup https://your-space:8100"
+if [ -n "$unfinished" ]; then
+  echo "Setup did not finish (see the error above). Repeat it with the address of your own SPACE: spacebridge setup <address>" >&2
+  exit 1
+fi
+[ $# -gt 0 ] || echo "Next: spacebridge setup <the address of your SPACE, as in the browser>"
