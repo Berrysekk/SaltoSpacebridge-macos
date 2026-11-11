@@ -24,6 +24,8 @@ builder.Logging.SetMinimumLevel(LogLevel.Warning);
 builder.Logging.AddSimpleConsole(console => console.SingleLine = true).AddFilter("Microsoft.AspNetCore.Server.Kestrel.Https", LogLevel.Debug);
 builder.WebHost.ConfigureKestrel(kestrel =>
 {
+    // HTTP/1.1 only, as the Windows bridge: HTTP/2 logged a failed GOAWAY write for every closed connection.
+    kestrel.ConfigureEndpointDefaults(listen => listen.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1);
     foreach (var loopback in new[] { IPAddress.Loopback, IPAddress.IPv6Loopback })
     {
         kestrel.Listen(loopback, ports[0]);
