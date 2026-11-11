@@ -107,6 +107,11 @@ public static class SignKey
                 {
                     throw new IOException($"No answer from {url} (http instead of https, or the other way round?)");
                 }
+                catch (HttpRequestException e)
+                {
+                    // An address copied from the README (your-space) ends here, as a name nobody knows.
+                    throw new IOException($"Cannot reach {Config.Origin(source)}: {e.Message}. Give the address of your own SPACE, the one you open in the browser.");
+                }
                 using (response)
                 {
                     response.EnsureSuccessStatusCode();
