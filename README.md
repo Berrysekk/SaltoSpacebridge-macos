@@ -36,7 +36,7 @@ brew install spacebridge
 spacebridge
 ```
 
-**One command**
+**Native install**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh
