@@ -44,10 +44,6 @@ curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/ma
 
 The command lands in a directory that is already on your PATH (`/usr/local/bin` on a new Mac, for which macOS asks your password once), so `spacebridge` works in the same terminal right away. An upgrade through the same command keeps your settings and only updates the service.
 
-> [!NOTE]
-> While this repository is private, both ways need a GitHub login that can read it. Without one, download `spacebridge-<version>-macos-arm64.tar.gz` from [Releases](../../releases) and run
-> `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.1.0-macos-arm64.tar.gz sh install.sh`.
-
 **Setting it up**
 
 Both ways end in a guided setup (later: `spacebridge setup`, or the first `spacebridge`). It asks, one screen each, with **Esc** to go back:
