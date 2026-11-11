@@ -289,27 +289,36 @@ public static partial class Cli
 
     static void Row(string name, string value) => Console.WriteLine($"  {name,-13}{value}");
 
+    /// <summary>The service and its certificate, for `status` (with the command that fixes each) and for the menu.</summary>
+    static List<(string Name, string Value)> ServiceRows(ServiceState? service, bool hints)
+    {
+        string Hint(string command) => hints ? "  " + Dim(command) : "";
+        var rows = new List<(string, string)>();
+        if (service is { Answers: true })
+        {
+            rows.Add(("Service", $"{Green("●")} running{(hints ? " " + Dim($"(pid {service.Pid})") : "")}  http://localhost:{service.Http}" + (service.Https > 0 ? $"  https://localhost:{service.Https}" : "")));
+            if (service.Version != Version) rows.Add(("", Yellow($"the service is version {service.Version}; `spacebridge install` updates it to {Version}")));
+        }
+        else if (File.Exists(Paths.Plist)) rows.Add(("Service", $"{Red("●")} not running{Hint("spacebridge start · spacebridge logs")}"));
+        else rows.Add(("Service", $"{Dim("○")} not installed{Hint("spacebridge setup <SPACE address>")}"));
+
+        if (File.Exists(Paths.CertificateFile))
+        {
+            using var certificate = X509CertificateLoader.LoadCertificateFromFile(Paths.CertificateFile);
+            rows.Add(("Certificate", CertificateTrusted()
+                ? $"{Green("●")} trusted for https://localhost {Dim($"until {certificate.NotAfter:yyyy-MM-dd}")}"
+                : $"{Red("●")} not trusted: a SPACE on https cannot reach the bridge{Hint("spacebridge install")}"));
+        }
+        return rows;
+    }
+
     static int Status()
     {
         var config = Config.Load();
         Console.WriteLine($"{Bold("Spacebridge")} {Version} {Dim($"· SALTO Local IO Bridge {Server.BridgeVersion} for macOS")}\n");
 
         var service = Service();
-        if (service is { Answers: true })
-        {
-            Row("Service", $"{Green("●")} running {Dim($"(pid {service.Pid})")}  http://localhost:{service.Http}" + (service.Https > 0 ? $"  https://localhost:{service.Https}" : ""));
-            if (service.Version != Version) Row("", Yellow($"the service is version {service.Version}; `spacebridge install` updates it to {Version}"));
-        }
-        else if (File.Exists(Paths.Plist)) Row("Service", $"{Red("●")} not running  {Dim("spacebridge start · spacebridge logs")}");
-        else Row("Service", $"{Dim("○")} not installed  {Dim("spacebridge setup <SPACE address>")}");
-
-        if (File.Exists(Paths.CertificateFile))
-        {
-            using var certificate = X509CertificateLoader.LoadCertificateFromFile(Paths.CertificateFile);
-            Row("Certificate", CertificateTrusted()
-                ? $"{Green("●")} trusted for https://localhost {Dim($"until {certificate.NotAfter:yyyy-MM-dd}")}"
-                : $"{Red("●")} not trusted: a SPACE on https cannot reach the bridge  {Dim("spacebridge install")}");
-        }
+        foreach (var (name, value) in ServiceRows(service, hints: true)) Row(name, value);
         Row("Signing key", SignKey.Present ? $"{Green("●")} imported" : $"{Red("●")} missing: devices cannot be opened  {Dim("spacebridge key import <SPACE address>")}");
         Row("Allowed", config.Origins.Count == 0
             ? $"{Yellow("●")} any website {Dim("(as SALTO's bridge)")}  {Dim("spacebridge allow <SPACE address>")}"

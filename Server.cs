@@ -76,7 +76,9 @@ public static class Server
                 await context.Response.WriteAsJsonAsync(new { error = error.Message, code = error.Code }, json);
             }
             // Which page asked for what: the only trace of a browser that found the bridge but could not use it.
-            Log.Info($"{context.Request.Scheme} {context.Request.Method} {Clean(context.Request.Path)} -> {context.Response.StatusCode} from {Clean(origin ?? "-")}");
+            // Without an Origin, /info is the spacebridge command looking whether the service answers: not worth a line each time.
+            if (origin is not null || context.Request.Path != "/info")
+                Log.Info($"{context.Request.Scheme} {context.Request.Method} {Clean(context.Request.Path)} -> {context.Response.StatusCode} from {Clean(origin ?? "-")}");
         });
 
         app.MapGet("/info", () =>

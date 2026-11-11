@@ -1,11 +1,11 @@
 #!/bin/sh
 # Installs Spacebridge for the logged-in user and puts the `spacebridge` command on the PATH.
-#   curl -fsSL https://raw.githubusercontent.com/totosoftsro/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://space.example:8100
+#   curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://space.example:8100
 # With a SPACE address it also sets everything up (`spacebridge setup <address>`); without one, run that afterwards.
 # Uninstall: spacebridge uninstall --all && rm "$(command -v spacebridge)"
 set -eu
 
-repo=totosoftsro/SaltoSpacebridge-macos
+repo=Berrysekk/SaltoSpacebridge-macos
 dir="$HOME/Library/Application Support/Spacebridge"
 [ "$(uname -s)" = Darwin ] && [ "$(uname -m)" = arm64 ] || { echo "Spacebridge runs on Apple silicon Macs only." >&2; exit 1; }
 

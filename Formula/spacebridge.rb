@@ -1,11 +1,11 @@
-# brew tap totosoftsro/spacebridge https://github.com/totosoftsro/SaltoSpacebridge-macos
+# brew tap berrysekk/spacebridge https://github.com/Berrysekk/SaltoSpacebridge-macos
 # brew install spacebridge
 class Spacebridge < Formula
   desc "SALTO ProAccess SPACE Local IO Bridge for macOS"
-  homepage "https://github.com/totosoftsro/SaltoSpacebridge-macos"
-  url "https://github.com/totosoftsro/SaltoSpacebridge-macos/releases/download/v1.0.0/spacebridge-1.0.0-macos-arm64.tar.gz"
+  homepage "https://github.com/Berrysekk/SaltoSpacebridge-macos"
+  url "https://github.com/Berrysekk/SaltoSpacebridge-macos/releases/download/v1.0.0/spacebridge-1.0.0-macos-arm64.tar.gz"
   version "1.0.0"
-  sha256 "4d6de57911cb1fa4b69fc8c98c0253366145b8ddbe31b8c186970b55423ac849"
+  sha256 "b37e02e3d99908b5e3e6c98bb72d69b46dbf8a93c93b609afd69e548da8b9fa4"
 
   depends_on arch: :arm64
   depends_on :macos

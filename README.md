@@ -25,7 +25,7 @@ Apple silicon, macOS 13 or later.
 With Homebrew:
 
 ```sh
-brew tap totosoftsro/spacebridge https://github.com/totosoftsro/SaltoSpacebridge-macos
+brew tap berrysekk/spacebridge https://github.com/Berrysekk/SaltoSpacebridge-macos
 brew install spacebridge
 spacebridge setup https://your-space:8100
 ```
@@ -33,7 +33,7 @@ spacebridge setup https://your-space:8100
 Or with one command:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/totosoftsro/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://your-space:8100
+curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh -s -- https://your-space:8100
 ```
 
 `setup` takes the address of your SPACE exactly as you type it in the browser and does three things:
