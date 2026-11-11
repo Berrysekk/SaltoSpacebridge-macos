@@ -6,7 +6,7 @@ namespace SaltoBridge;
 /// <summary>New releases from GitHub: the service looks for one every few hours and installs it, `spacebridge update` does so on request.</summary>
 public static class Update
 {
-    const string Releases = "https://api.github.com/repos/Berrysekk/SaltoSpacebridge-macos/releases/latest";
+    const string Releases = "https://api.github.com/repos/Berrysekk/spacebridge/releases/latest";
 
     public sealed record Release(string Version, string Url, string? Sha256);
 

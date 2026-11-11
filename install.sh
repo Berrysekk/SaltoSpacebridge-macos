@@ -1,11 +1,11 @@
 #!/bin/sh
 # Installs Spacebridge for the logged-in user, puts the `spacebridge` command on the PATH and starts the guided setup.
-#   curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Berrysekk/spacebridge/main/install.sh | sh
 # For scripts, a SPACE address skips the questions: ... | sh -s -- https://space.example:8100
 # Uninstall: spacebridge uninstall
 set -eu
 
-repo=Berrysekk/SaltoSpacebridge-macos
+repo=Berrysekk/spacebridge
 again="curl -fsSL https://raw.githubusercontent.com/$repo/main/install.sh | sh"
 dir="$HOME/Library/Application Support/Spacebridge"
 app="$dir/Spacebridge.app"

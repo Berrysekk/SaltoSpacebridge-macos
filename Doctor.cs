@@ -12,7 +12,7 @@ public sealed class Failure(string message, string? fix = null) : Exception(mess
 // Errors as the user reads them, and `spacebridge doctor`.
 public static partial class Cli
 {
-    const string Installer = "curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh";
+    const string Installer = "curl -fsSL https://raw.githubusercontent.com/Berrysekk/spacebridge/main/install.sh | sh";
 
     static readonly string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 

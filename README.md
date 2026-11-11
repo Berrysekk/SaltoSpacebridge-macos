@@ -22,13 +22,13 @@ SPACE runs in the browser, but encoders plug into your computer. SALTO's *Local 
 **Native install**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Berrysekk/spacebridge/main/install.sh | sh
 ```
 
 **Homebrew**
 
 ```sh
-brew tap berrysekk/spacebridge https://github.com/Berrysekk/SaltoSpacebridge-macos
+brew tap berrysekk/spacebridge https://github.com/Berrysekk/spacebridge
 brew install spacebridge
 spacebridge
 ```
