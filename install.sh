@@ -12,7 +12,7 @@ app="$dir/Spacebridge.app"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-# A local archive (SPACEBRIDGE_ARCHIVE=dist/spacebridge-1.0.1-macos-arm64.tar.gz) instead of the latest release.
+# A local archive (SPACEBRIDGE_ARCHIVE=dist/spacebridge-1.1.0-macos-arm64.tar.gz) instead of the latest release.
 if [ -n "${SPACEBRIDGE_ARCHIVE:-}" ]; then
   cp "$SPACEBRIDGE_ARCHIVE" "$tmp/spacebridge.tar.gz"
 else
