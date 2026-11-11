@@ -19,20 +19,19 @@ SPACE runs in the browser, but encoders plug into your computer. SALTO's *Local 
 
 ## Install
 
+**Native install**
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Berrysekk/SaltoSpacebridge-macos/main/install.sh | sh
 ```
 
-or with Homebrew:
+**Homebrew**
 
 ```sh
 brew tap berrysekk/spacebridge https://github.com/Berrysekk/SaltoSpacebridge-macos
 brew install spacebridge
 spacebridge
 ```
-
-> [!NOTE]
-> While this repository is private, both need a GitHub login that can read it. Without one, download the archive from [Releases](../../releases) and run `SPACEBRIDGE_ARCHIVE=~/Downloads/spacebridge-1.1.0-macos-arm64.tar.gz sh install.sh`.
 
 ## Set up
 
