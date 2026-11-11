@@ -72,7 +72,10 @@ public static class Server
         var certificate = Certificate.Renew();
 
         // The slim builder and plain request delegates: nothing here needs reflection, so the program compiles to native code.
-        var builder = WebApplication.CreateSlimBuilder();
+        // The service's own folder is `/` under launchd, and ASP.NET watches its content root for a changed appsettings.json:
+        // the whole disk, where every renamed folder costs a walk through it. There are no such settings to watch.
+        Environment.SetEnvironmentVariable("DOTNET_hostBuilder__reloadConfigOnChange", "false");
+        var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { ContentRootPath = AppContext.BaseDirectory });
         builder.WebHost.UseKestrelHttpsConfiguration();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         // A browser that does not trust the https certificate drops the connection before any request: only this shows it.

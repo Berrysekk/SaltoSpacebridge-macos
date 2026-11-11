@@ -8,11 +8,11 @@
 <p align="center">
   <img alt="macOS 13 or later" src="https://img.shields.io/badge/macOS-13%2B-0d1117?logo=apple&logoColor=white">
   <img alt="Apple silicon" src="https://img.shields.io/badge/Apple%20silicon-arm64-0d1117">
-  <img alt="Version 2.0.5" src="https://img.shields.io/badge/version-2.0.5-3fb950">
+  <img alt="Version 2.0.6" src="https://img.shields.io/badge/version-2.0.6-3fb950">
 </p>
 
 <p align="center">
-  <img src="docs/menu.svg?v=2.0.5" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service, Updates and Maintenance">
+  <img src="docs/menu.svg?v=2.0.6" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service, Updates and Maintenance">
 </p>
 
 SPACE runs in the browser, but encoders plug into your computer. SALTO's *Local IO Bridge* connects the two, and SALTO ships it for Windows only. Spacebridge is the same bridge for the Mac: SPACE finds it and uses it as if it were SALTO's own.
