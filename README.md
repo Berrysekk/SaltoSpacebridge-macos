@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/menu.svg" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service and Diagnostics">
+  <img src="docs/menu.svg" width="760" alt="The spacebridge menu: service and certificate status on top, then Access, Devices, Service, Updates and Maintenance">
 </p>
 
 SPACE runs in the browser, but encoders plug into your computer. SALTO's *Local IO Bridge* connects the two, and SALTO ships it for Windows only. Spacebridge is the same bridge for the Mac: SPACE finds it and uses it as if it were SALTO's own.
@@ -35,7 +35,7 @@ spacebridge
 
 ## Set up
 
-The installer ends in a short guided setup. You can repeat it any time with `spacebridge setup`.
+The installer ends in a short guided setup. You can repeat it any time with `spacebridge setup`, or with **Set up again** in the menu.
 
 | Step | What it asks |
 |---|---|
@@ -54,7 +54,7 @@ SALTO's signing key is not part of Spacebridge. Setup reads it from the bridge i
 spacebridge
 ```
 
-opens the menu in the picture. **↑ ↓** move, **Enter** or **→** picks, **Esc** or **←** goes back. Everything is in there: allowed addresses, devices, the service, the live log.
+opens the menu in the picture. **↑ ↓** move, **Enter** or **→** picks, **Esc** or **←** goes back. Everything is in there: allowed addresses, devices, the service and its live log, updates, repairs.
 
 The same as commands, for scripts:
 

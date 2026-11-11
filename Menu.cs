@@ -80,13 +80,15 @@ public static partial class Cli
                         running ? Quiet("Stop", () => { Silent(Stop); return "Service stopped until the next login."; }, "", "Service")
                             : Quiet("Start", () => { Start(); return "Service started."; }, "", "Service"),
                         Quiet("Restart", () => { Restart(); return "Service restarted."; }, "", "Service"),
-                        Shown("Update", () => UpdateNow(false), service?.Update is { } update && Update.IsNewer(update, Version)
-                            ? Yellow($"version {update} is available") : Dim("looks for a new release now"), "Service"),
-                        Toggle("Automatic updates", "autoupdate", config.AutoUpdate, null, "Service"),
-                        new("Uninstall…", UninstallMenu, "", "Service"),
-                        new("Live log", LiveLog, Dim(Paths.Short(Paths.Log)), "Diagnostics"),
-                        Shown("Doctor", () => Doctor(true), Dim("finds what is wrong and repairs it"), "Diagnostics"),
+                        new("Live log", LiveLog, Dim("which page asked for what"), "Service"),
+                        Shown("Update now", () => UpdateNow(false), service?.Update is { } update && Update.IsNewer(update, Version)
+                            ? Yellow($"version {update} is available") : Dim("looks for a new release"), "Updates"),
+                        Toggle("Automatic updates", "autoupdate", config.AutoUpdate, null, "Updates"),
+                        Shown("Doctor", () => Doctor(true), Dim("finds what is wrong and repairs it"), "Maintenance"),
                     ]);
+                    // The same questions as the first time, with today's answers filled in.
+                    if (IsSetUp) items.Add(new("Set up again…", async () => await Onboarding(welcome: false) ? Ready : "", Dim("your SPACE, who may use the bridge, devices"), "Maintenance"));
+                    items.Add(new("Uninstall…", UninstallMenu, "", "Maintenance"));
                     return items;
                 }, root: true, note: note);
             return 0;

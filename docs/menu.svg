@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 771 486" width="771" height="486" role="img" aria-label="spacebridge">
-<rect width="771" height="486" rx="12" fill="#0d1117" stroke="#30363d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 771 507" width="771" height="507" role="img" aria-label="spacebridge">
+<rect width="771" height="507" rx="12" fill="#0d1117" stroke="#30363d"/>
 <path d="M0 38 H771" stroke="#21262d"/>
 <circle cx="22" cy="19" r="6" fill="#ff5f57"/><circle cx="42" cy="19" r="6" fill="#febc2e"/><circle cx="62" cy="19" r="6" fill="#28c840"/>
 <text x="385" y="24" text-anchor="middle" fill="#8b949e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13">spacebridge</text>
@@ -49,22 +49,25 @@
 <text x="28.4" y="294" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">SERVICE</text>
 <text x="162.8" y="294" textLength="33.6" lengthAdjust="spacing" fill="#e6edf3">Stop</text>
 <text x="162.8" y="315" textLength="58.8" lengthAdjust="spacing" fill="#e6edf3">Restart</text>
-<text x="162.8" y="336" textLength="50.4" lengthAdjust="spacing" fill="#e6edf3">Update</text>
-<text x="364.4" y="336" textLength="226.8" lengthAdjust="spacing" fill="#8b949e">looks for a new release now</text>
-<text x="162.8" y="357" textLength="142.8" lengthAdjust="spacing" fill="#e6edf3">Automatic updates</text>
-<text x="364.4" y="357" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
-<text x="162.8" y="378" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Uninstall…</text>
-<text x="28.4" y="399" textLength="92.4" lengthAdjust="spacing" fill="#58a6ff">DIAGNOSTICS</text>
-<text x="162.8" y="399" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">Live log</text>
-<text x="364.4" y="399" textLength="252.0" lengthAdjust="spacing" fill="#8b949e">~/Library/Logs/Spacebridge.log</text>
-<text x="162.8" y="420" textLength="50.4" lengthAdjust="spacing" fill="#e6edf3">Doctor</text>
-<text x="364.4" y="420" textLength="285.6" lengthAdjust="spacing" fill="#8b949e">finds what is wrong and repairs it</text>
-<text x="41.0" y="462" text-anchor="middle" fill="#e6edf3" font-weight="700">↑</text>
-<text x="49.4" y="462" text-anchor="middle" fill="#e6edf3" font-weight="700">↓</text>
-<text x="62.0" y="462" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">move</text>
-<text x="125.0" y="462" text-anchor="middle" fill="#e6edf3" font-weight="700">⏎</text>
-<text x="141.8" y="462" text-anchor="middle" fill="#e6edf3" font-weight="700">→</text>
-<text x="154.4" y="462" textLength="50.4" lengthAdjust="spacing" fill="#8b949e">select</text>
-<text x="230.0" y="462" textLength="25.2" lengthAdjust="spacing" fill="#e6edf3" font-weight="700">esc</text>
-<text x="263.6" y="462" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">quit</text>
+<text x="162.8" y="336" textLength="67.2" lengthAdjust="spacing" fill="#e6edf3">Live log</text>
+<text x="364.4" y="336" textLength="210.0" lengthAdjust="spacing" fill="#8b949e">which page asked for what</text>
+<text x="28.4" y="357" textLength="58.8" lengthAdjust="spacing" fill="#58a6ff">UPDATES</text>
+<text x="162.8" y="357" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Update now</text>
+<text x="364.4" y="357" textLength="193.2" lengthAdjust="spacing" fill="#8b949e">looks for a new release</text>
+<text x="162.8" y="378" textLength="142.8" lengthAdjust="spacing" fill="#e6edf3">Automatic updates</text>
+<text x="364.4" y="378" textLength="16.8" lengthAdjust="spacing" fill="#3fb950">on</text>
+<text x="28.4" y="399" textLength="92.4" lengthAdjust="spacing" fill="#58a6ff">MAINTENANCE</text>
+<text x="162.8" y="399" textLength="50.4" lengthAdjust="spacing" fill="#e6edf3">Doctor</text>
+<text x="364.4" y="399" textLength="285.6" lengthAdjust="spacing" fill="#8b949e">finds what is wrong and repairs it</text>
+<text x="162.8" y="420" textLength="109.2" lengthAdjust="spacing" fill="#e6edf3">Set up again…</text>
+<text x="364.4" y="420" textLength="361.2" lengthAdjust="spacing" fill="#8b949e">your SPACE, who may use the bridge, devices</text>
+<text x="162.8" y="441" textLength="84.0" lengthAdjust="spacing" fill="#e6edf3">Uninstall…</text>
+<text x="41.0" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">↑</text>
+<text x="49.4" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">↓</text>
+<text x="62.0" y="483" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">move</text>
+<text x="125.0" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">⏎</text>
+<text x="141.8" y="483" text-anchor="middle" fill="#e6edf3" font-weight="700">→</text>
+<text x="154.4" y="483" textLength="50.4" lengthAdjust="spacing" fill="#8b949e">select</text>
+<text x="230.0" y="483" textLength="25.2" lengthAdjust="spacing" fill="#e6edf3" font-weight="700">esc</text>
+<text x="263.6" y="483" textLength="33.6" lengthAdjust="spacing" fill="#8b949e">quit</text>
 </g></svg>
